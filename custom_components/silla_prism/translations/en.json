@@ -1,0 +1,194 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured",
+            "cannot_connect": "Unable to connect to the device",
+            "discover_timeout": "Unable to discover requested device",
+            "reconfigure_successful": "Device reconfigured successfully",
+            "unknown": "Unknown error occurred"
+        },
+        "error": {
+            "linking": "Unknown linking error occurred.",
+            "register_failed": "Failed to register, please try again",
+            "battery_sensor_required": "Enter a battery power sensor to enable solar battery balancing"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "topic": "Topic",
+                    "ports": "Number of available ports",
+                    "serial": "Unique device code. Use if you have multiple devices",
+                    "vsensors": "Enable virtual sensors",
+                    "powerwall": "Enable Powerwall sensors",
+                    "maxcurr": "Maximum settable current 6A-32A",
+                    "solar_battery_balance": "Enable solar battery balancing",
+                    "battery_power_sensor": "Battery power sensor",
+                    "battery_soc_sensor": "Home battery SOC sensor (%)",
+                    "battery_discharge_positive": "Battery discharge is a positive value",
+                    "battery_max_charge_power": "Battery reserve power at low SOC (W)",
+                    "solar_balance_phases": "Number of charging phases",
+                    "solar_balance_margin": "Power margin to keep before charging (W)",
+                    "solar_balance_start_delay": "Minimum stable surplus time before charging (minutes)",
+                    "solar_balance_use_battery_charge": "Also treat battery charging power as EV surplus",
+                    "solar_balance_soc_mid": "Medium home battery SOC for EV priority (%)",
+                    "solar_balance_soc_high": "High home battery SOC for EV priority (%)",
+                    "solar_balance_mid_reserve_power": "Battery reserve power at medium SOC (W)",
+                    "solar_balance_high_reserve_power": "Battery reserve power at high SOC (W)"
+                },
+                "description": "Please enter connection settings of your device",
+                "title": "Configure Silla Prsim Integration"
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "touch_sigle": {
+                "name": "Single touch"
+            },
+            "touch_double": {
+                "name": "Double touch"
+            },
+            "touch_long": {
+                "name": "Long touch"
+            },
+            "online": {
+                "name": "Connection status",
+                "state": {
+                    "on": "Online",
+                    "off": "Offline"
+                }
+            },
+            "error": {
+                "name": "Error status"
+            }
+        },
+        "number": {
+            "set_current_limit": {
+                "name": "Current limit"
+            },
+            "set_max_current": {
+                "name": "Current limited by user"
+            }
+        },
+        "select": {
+            "set_port_mode": {
+                "name": "Set port output mode",
+                "state": {
+                    "solar": "Solar",
+                    "normal": "Normal",
+                    "paused": "Paused"
+                }
+            }
+        },
+        "switch": {
+            "solar_battery_balance": {
+                "name": "Solar battery balancing"
+            }
+        },
+        "sensor": {
+            "output_current": {
+                "name": "Output current"
+            },
+            "current_port_mode": {
+                "name": "Current port output mode",
+                "state": {
+                    "solar": "Solar",
+                    "normal": "Normal",
+                    "paused": "Paused",
+                    "suspended": "Suspended",
+                    "unknown": "Unknown",
+                    "autolimit": "Auto limit"
+                }
+            },
+            "output_car_current": {
+                "name": "Car requested by car"
+            },
+            "input_grid_power": {
+                "name": "Power from utility"
+            },
+            "current_state": {
+                "name": "Wallbox current state",
+                "state": {
+                    "idle": "Idle",
+                    "waiting": "Waiting",
+                    "charging": "Charging",
+                    "pause": "Paused"
+                }
+            },
+            "current_set_by_user": {
+                "name": "Current limited by user"
+            },
+            "power_grid_voltage": {
+                "name": "Power grid voltage"
+            },
+            "output_power": {
+                "name": "Power provided to car"
+            },
+            "session_output_energy": {
+                "name": "Energy provided in last session"
+            },
+            "total_output_energy": {
+                "name": "Total energy"
+            },
+            "core_temperature": {
+                "name": "CPU temperature"
+            },
+            "input_grid_energy": {
+                "name": "Total energy from grid"
+            },
+            "powerwall_solar": {
+                "name": "Power produced by PV"
+            },
+            "powerwall_house": {
+                "name": "Power consumed by the house"
+            },
+            "solar_balance_status": {
+                "name": "Solar balance status",
+                "state": {
+                    "disabled": "Disabled",
+                    "waiting_data": "Waiting for data",
+                    "waiting_stable_surplus": "Waiting for stable surplus",
+                    "paused_low_surplus": "Paused for low surplus",
+                    "charging_surplus": "Charging from surplus"
+                }
+            },
+            "solar_balance_surplus_current": {
+                "name": "Solar surplus current"
+            },
+            "solar_balance_start_countdown": {
+                "name": "Stable surplus countdown"
+            },
+            "solar_balance_available_power": {
+                "name": "Calculated total surplus"
+            },
+            "solar_balance_battery_power_used": {
+                "name": "Battery power used in calculation"
+            },
+            "solar_balance_grid_power": {
+                "name": "Grid power used in calculation"
+            },
+            "solar_balance_target_current": {
+                "name": "Calculated target current"
+            },
+            "solar_balance_decision_reason": {
+                "name": "Decision reason",
+                "state": {
+                    "disabled": "Disabled",
+                    "waiting_data": "Waiting for data",
+                    "waiting_stable_surplus": "Waiting for stable surplus",
+                    "paused_low_surplus": "Paused for low surplus",
+                    "charging_surplus": "Charging from surplus"
+                }
+            }
+        },
+        "button": {
+            "set_mode_traps_auth": {
+                "name": "Charge authorization"
+            },
+            "set_mode_traps_noauth": {
+                "name": "Revoke charge authorization"
+            }
+        }
+    },
+    "title": "Silla Prism Integration"
+}

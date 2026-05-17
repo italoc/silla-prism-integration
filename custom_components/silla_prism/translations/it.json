@@ -1,0 +1,194 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Dispositivo già configurato",
+            "cannot_connect": "Impossibile connettersi al dispositivo",
+            "discover_timeout": "Impossibile scoprire i dispositivi",
+            "reconfigure_successful": "Dispositivo riconfigurato con successo",
+            "unknown": "Errore sconosciuto"
+        },
+        "error": {
+            "linking": "Errore di collegamento sconosciuto",
+            "register_failed": "Impossibile registrare, riprovare",
+            "battery_sensor_required": "Inserire un sensore potenza batteria per abilitare il bilanciamento solare"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "topic": "Topic",
+                    "ports": "Numero delle porte disponibili",
+                    "serial": "Codice univoco del dispositivo. Usare se si hanno piu' dispositivi",
+                    "vsensors": "Abilita sensori virtuali",
+                    "powerwall": "Abilita sensori per il Powerwall",
+                    "maxcurr": "Corrente massima impostabile 6A-32A",
+                    "solar_battery_balance": "Abilita bilanciamento solare con batteria",
+                    "battery_power_sensor": "Sensore potenza batteria",
+                    "battery_soc_sensor": "Sensore SOC batteria casa (%)",
+                    "battery_discharge_positive": "La batteria in scarica ha valore positivo",
+                    "battery_max_charge_power": "Potenza riservata alla batteria con SOC basso (W)",
+                    "solar_balance_phases": "Numero fasi usate per la ricarica",
+                    "solar_balance_margin": "Margine di potenza da lasciare prima della ricarica (W)",
+                    "solar_balance_start_delay": "Tempo minimo di surplus stabile prima della ricarica (minuti)",
+                    "solar_balance_use_battery_charge": "Considera anche la carica batteria come surplus per l'auto",
+                    "solar_balance_soc_mid": "SOC batteria medio per priorità auto (%)",
+                    "solar_balance_soc_high": "SOC batteria alto per priorità auto (%)",
+                    "solar_balance_mid_reserve_power": "Potenza riservata alla batteria con SOC medio (W)",
+                    "solar_balance_high_reserve_power": "Potenza riservata alla batteria con SOC alto (W)"
+                },
+                "description": "Inserire i dettagli della connessione al dispositivo",
+                "title": "Configurazione Silla Prsim"
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "touch_sigle": {
+                "name": "Tocco singolo"
+            },
+            "touch_double": {
+                "name": "Doppio tocco"
+            },
+            "touch_long": {
+                "name": "Pressione lunga"
+            },
+            "online": {
+                "name": "Stato connessione",
+                "state": {
+                    "on": "Connesso",
+                    "off": "Disconnesso"
+                }
+            },
+            "error": {
+                "name": "In errore"
+            }
+        },
+        "number": {
+            "set_current_limit": {
+                "name": "Limite corrente"
+            },
+            "set_max_current": {
+                "name": "Corrente utente"
+            }
+        },
+        "select": {
+            "set_port_mode": {
+                "name": "Imposta modalit\u00e0 porta",
+                "state": {
+                    "solar": "Solare",
+                    "normal": "Normale",
+                    "paused": "In pausa"
+                }
+            }
+        },
+        "switch": {
+            "solar_battery_balance": {
+                "name": "Bilanciamento solare batteria"
+            }
+        },
+        "sensor": {
+            "output_current": {
+                "name": "Corrente erogata"
+            },
+            "current_port_mode": {
+                "name": "Modo della porta",
+                "state": {
+                    "solar": "Solare",
+                    "normal": "Normale",
+                    "paused": "In pausa",
+                    "suspended": "In sospeso",
+                    "unknown": "Sconosciuto",
+                    "autolimit": "Auto limitazione"
+                }
+            },
+            "output_car_current": {
+                "name": "Corrente pilotata dall'auto"
+            },
+            "input_grid_power": {
+                "name": "Potenza prelevata dalla rete"
+            },
+            "current_state": {
+                "name": "Stato wallbox",
+                "state": {
+                    "idle": "Inattivo",
+                    "waiting": "In attesa",
+                    "charging": "In carica",
+                    "pause": "In pausa"
+                }
+            },
+            "current_set_by_user": {
+                "name": "Corrente limitata dall'utente"
+            },
+            "power_grid_voltage": {
+                "name": "Tensione di rete"
+            },
+            "output_power": {
+                "name": "Potenza assorbita"
+            },
+            "session_output_energy": {
+                "name": "Energia erogata ultima sessione"
+            },
+            "total_output_energy": {
+                "name": "Energia erogata totale"
+            },
+            "core_temperature": {
+                "name": "Temperatura della CPU"
+            },
+            "input_grid_energy": {
+                "name": "Energia totale dalla rete"
+            },
+            "powerwall_solar": {
+                "name": "Potenza prodotta dal fotovoltaico"
+            },
+            "powerwall_house": {
+                "name": "Potenza consumata dalla casa"
+            },
+            "solar_balance_status": {
+                "name": "Stato bilanciamento solare",
+                "state": {
+                    "disabled": "Disabilitato",
+                    "waiting_data": "In attesa dei dati",
+                    "waiting_stable_surplus": "In attesa di surplus stabile",
+                    "paused_low_surplus": "In pausa per surplus basso",
+                    "charging_surplus": "Carica da surplus"
+                }
+            },
+            "solar_balance_surplus_current": {
+                "name": "Corrente surplus solare"
+            },
+            "solar_balance_start_countdown": {
+                "name": "Countdown surplus stabile"
+            },
+            "solar_balance_available_power": {
+                "name": "Surplus totale calcolato"
+            },
+            "solar_balance_battery_power_used": {
+                "name": "Potenza batteria usata nel calcolo"
+            },
+            "solar_balance_grid_power": {
+                "name": "Potenza rete usata nel calcolo"
+            },
+            "solar_balance_target_current": {
+                "name": "Corrente target calcolata"
+            },
+            "solar_balance_decision_reason": {
+                "name": "Motivo decisione",
+                "state": {
+                    "disabled": "Disabilitato",
+                    "waiting_data": "In attesa dei dati",
+                    "waiting_stable_surplus": "In attesa di surplus stabile",
+                    "paused_low_surplus": "In pausa per surplus basso",
+                    "charging_surplus": "Carica da surplus"
+                }
+            }
+        },
+        "button": {
+            "set_mode_traps_auth": {
+                "name": "Autorizza ricarica"
+            },
+            "set_mode_traps_noauth": {
+                "name": "Revoca autorizzazione ricarica"
+            }
+        }
+    },
+    "title": "Silla Prism connector"
+}
