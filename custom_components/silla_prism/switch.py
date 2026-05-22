@@ -322,7 +322,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     battery_power_to_exclude,
                     battery_reserve_power,
                     target_current=MIN_CHARGE_CURRENT,
-                    decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
+                    decision_reason=SOLAR_BALANCE_CHARGING_SURPLUS,
                 )
                 await self._async_publish_current(MIN_CHARGE_CURRENT)
                 await self._async_publish_mode(MODE_SOLAR)
