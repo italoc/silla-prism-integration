@@ -30,6 +30,7 @@ from .entry_data import RuntimeEntryData
 from .solar_balance import (
     SOLAR_BALANCE_CHARGING_SURPLUS,
     SOLAR_BALANCE_DISABLED,
+    SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
     SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
     SOLAR_BALANCE_WAITING_DATA,
@@ -321,7 +322,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     battery_power_to_exclude,
                     battery_reserve_power,
                     target_current=MIN_CHARGE_CURRENT,
-                    decision_reason="low_surplus_keep_charging",
+                    decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
                 )
                 await self._async_publish_current(MIN_CHARGE_CURRENT)
                 await self._async_publish_mode(MODE_SOLAR)

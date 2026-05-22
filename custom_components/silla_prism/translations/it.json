@@ -149,7 +149,8 @@
                     "waiting_data": "In attesa dei dati",
                     "waiting_stable_surplus": "In attesa di surplus stabile",
                     "paused_low_surplus": "In pausa per surplus basso",
-                    "charging_surplus": "Carica da surplus"
+                    "charging_surplus": "Carica da surplus",
+                    "low_surplus_keep_charging": "Surplus basso, carica mantenuta a 6A"
                 }
             },
             "solar_balance_surplus_current": {
@@ -177,7 +178,8 @@
                     "waiting_data": "In attesa dei dati",
                     "waiting_stable_surplus": "In attesa di surplus stabile",
                     "paused_low_surplus": "In pausa per surplus basso",
-                    "charging_surplus": "Carica da surplus"
+                    "charging_surplus": "Carica da surplus",
+                    "low_surplus_keep_charging": "Surplus basso, carica mantenuta a 6A"
                 }
             }
         },
