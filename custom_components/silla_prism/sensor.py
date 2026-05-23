@@ -344,6 +344,16 @@ class PrismSolarBalanceSensor(SensorEntity):
             self._attr_native_value = state.grid_power
         elif self.entity_description.value_key == "target_current":
             self._attr_native_value = state.target_current
+        elif self.entity_description.value_key == "raw_target_current":
+            self._attr_native_value = state.raw_target_current
+        elif self.entity_description.value_key == "battery_reserve_power":
+            self._attr_native_value = state.battery_reserve_power
+        elif self.entity_description.value_key == "target_export_power":
+            self._attr_native_value = state.target_export_power
+        elif self.entity_description.value_key == "unused_export_power":
+            self._attr_native_value = state.unused_export_power
+        elif self.entity_description.value_key == "residual_export_remaining":
+            self._attr_native_value = state.residual_export_remaining or 0
         elif self.entity_description.value_key == "decision_reason":
             self._attr_native_value = state.decision_reason
 
@@ -360,7 +370,17 @@ class PrismSolarBalanceSensor(SensorEntity):
             "battery_max_charge_power": state.battery_max_charge_power,
             "battery_soc": state.battery_soc,
             "battery_reserve_power": state.battery_reserve_power,
+            "target_export_power": state.target_export_power,
+            "deadband_power": state.deadband_power,
+            "raw_target_current": state.raw_target_current,
             "target_current": state.target_current,
+            "unused_export_power": state.unused_export_power,
+            "excess_import_power": state.excess_import_power,
+            "residual_export_remaining": state.residual_export_remaining,
+            "deadband_active": state.deadband_active,
+            "ramp_limited": state.ramp_limited,
+            "ramp_direction": state.ramp_direction,
+            "current_limit_reason": state.current_limit_reason,
             "decision_reason": state.decision_reason,
         }
 
@@ -439,6 +459,56 @@ SOLAR_BALANCE_SENSORS: tuple[PrismSolarBalanceSensorEntityDescription, ...] = (
         has_entity_name=True,
         translation_key="solar_balance_target_current",
         value_key="target_current",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_raw_target_current_{}",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=1,
+        has_entity_name=True,
+        translation_key="solar_balance_raw_target_current",
+        value_key="raw_target_current",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_battery_reserve_power_{}",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        has_entity_name=True,
+        translation_key="solar_balance_battery_reserve_power",
+        value_key="battery_reserve_power",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_target_export_power_{}",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        has_entity_name=True,
+        translation_key="solar_balance_target_export_power",
+        value_key="target_export_power",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_unused_export_power_{}",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        has_entity_name=True,
+        translation_key="solar_balance_unused_export_power",
+        value_key="unused_export_power",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_residual_export_countdown_{}",
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_display_precision=0,
+        has_entity_name=True,
+        translation_key="solar_balance_residual_export_countdown",
+        value_key="residual_export_remaining",
     ),
     PrismSolarBalanceSensorEntityDescription(
         key="solar_balance_decision_reason_{}",

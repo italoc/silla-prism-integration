@@ -121,6 +121,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._last_current_command: int | None = None
         self._last_current_increase: datetime | None = None
         self._last_mode_command: str | None = None
+        self._raw_target_current: int | None = None
+        self._unused_export_power: float = 0
+        self._excess_import_power: float = 0
+        self._residual_export_remaining: int = 0
+        self._deadband_active = False
+        self._ramp_limited = False
+        self._ramp_direction = "none"
+        self._current_limit_reason = "waiting_data"
         self._charging_from_surplus = False
         self._surplus_since: datetime | None = None
         self._residual_export_since: datetime | None = None
@@ -314,7 +322,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         available_power = self._ev_power - self._grid_power - battery_power_to_exclude
         target_power = available_power - self._target_export_power
         min_power = MIN_CHARGE_CURRENT * voltage * self._phases
+        watts_per_amp = voltage * self._phases
         already_charging = self._is_charging_from_surplus(min_power)
+        self._reset_current_diagnostics()
 
         if target_power < min_power:
             self._reset_start_delay()
@@ -332,7 +342,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     battery_discharge_power,
                     battery_power_to_exclude,
                     battery_reserve_power,
+                    raw_target_current=MIN_CHARGE_CURRENT,
                     target_current=MIN_CHARGE_CURRENT,
+                    current_limit_reason="low_surplus_hold_6a",
                     decision_reason=SOLAR_BALANCE_CHARGING_SURPLUS,
                 )
                 await self._async_publish_current(MIN_CHARGE_CURRENT)
@@ -351,7 +363,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
+                raw_target_current=0,
                 target_current=0,
+                current_limit_reason="paused_low_surplus",
                 decision_reason="paused_low_surplus",
             )
             await self._async_publish_current(MIN_CHARGE_CURRENT)
@@ -360,7 +374,10 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
         target_current = floor(target_power / (voltage * self._phases))
         target_current = max(MIN_CHARGE_CURRENT, min(target_current, self._max_current))
-        target_current = self._apply_current_optimizations(target_current)
+        self._raw_target_current = target_current
+        target_current = self._apply_current_optimizations(
+            target_current, watts_per_amp
+        )
         delay_remaining = self._get_start_delay_remaining()
         if delay_remaining > 0 and not already_charging:
             preview_current = (
@@ -377,7 +394,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
+                raw_target_current=self._raw_target_current,
                 target_current=preview_current,
+                current_limit_reason="waiting_stable_surplus",
                 decision_reason="waiting_stable_surplus",
             )
             await self._async_publish_current(MIN_CHARGE_CURRENT)
@@ -396,7 +415,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             battery_discharge_power,
             battery_power_to_exclude,
             battery_reserve_power,
+            raw_target_current=self._raw_target_current,
             target_current=target_current,
+            current_limit_reason=self._current_limit_reason,
             decision_reason="charging_surplus",
         )
         await self._async_publish_current(target_current)
@@ -419,25 +440,40 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             return self._mid_reserve_power
         return self._battery_max_charge_power
 
-    def _apply_current_optimizations(self, target_current: int) -> int:
-        """Apply hysteresis, ramp limits and residual export recovery."""
+    def _apply_current_optimizations(
+        self, target_current: int, watts_per_amp: float
+    ) -> int:
+        """Apply hysteresis, proportional correction and ramp limits."""
         last_current = self._last_current_command
         if last_current is None:
+            self._track_grid_error()
             self._track_residual_export()
+            self._current_limit_reason = "initial_target"
             return target_current
 
-        grid_error = self._grid_power + self._target_export_power
-        if abs(grid_error) <= self._deadband_power:
+        self._track_grid_error()
+        if self._deadband_active:
             self._reset_residual_export()
+            self._current_limit_reason = "deadband_hold"
             return last_current
 
         target_current = self._apply_residual_export_recovery(target_current)
 
         if target_current > last_current:
-            return self._limit_current_increase(target_current, last_current)
+            return self._limit_current_increase(
+                target_current, last_current, watts_per_amp
+            )
         if target_current < last_current:
             self._reset_residual_export()
-            return max(target_current, last_current - self._decrease_step)
+            self._ramp_direction = "down"
+            step = self._get_proportional_decrease_step(watts_per_amp)
+            limited_current = max(target_current, last_current - step)
+            self._ramp_limited = limited_current != target_current
+            self._current_limit_reason = (
+                "ramp_down_limited" if self._ramp_limited else "target_current"
+            )
+            return limited_current
+        self._current_limit_reason = "target_current"
         return target_current
 
     def _apply_residual_export_recovery(self, target_current: int) -> int:
@@ -452,43 +488,82 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         )
         if recovered_current > target_current:
             self._reset_residual_export()
+            self._current_limit_reason = "residual_export_recovery"
             return recovered_current
         return target_current
 
+    def _track_grid_error(self) -> None:
+        grid_error = self._grid_power + self._target_export_power
+        self._deadband_active = abs(grid_error) <= self._deadband_power
+        self._unused_export_power = max(-grid_error - self._deadband_power, 0)
+        self._excess_import_power = max(grid_error - self._deadband_power, 0)
+
     def _track_residual_export(self) -> bool:
         if self._residual_export_power <= 0:
+            self._residual_export_remaining = 0
             return False
 
-        grid_error = self._grid_power + self._target_export_power
-        excess_export = max(-grid_error - self._deadband_power, 0)
-        if excess_export < self._residual_export_power:
+        if self._unused_export_power < self._residual_export_power:
             self._reset_residual_export()
             return False
 
         if self._residual_export_delay <= 0:
+            self._residual_export_remaining = 0
             return True
 
         now = datetime.now(timezone.utc)
         if self._residual_export_since is None:
             self._residual_export_since = now
+            self._residual_export_remaining = self._residual_export_delay
             return False
 
         elapsed = (now - self._residual_export_since).total_seconds()
+        self._residual_export_remaining = max(
+            self._residual_export_delay - int(elapsed), 0
+        )
         return elapsed >= self._residual_export_delay
 
-    def _limit_current_increase(self, target_current: int, last_current: int) -> int:
+    def _limit_current_increase(
+        self, target_current: int, last_current: int, watts_per_amp: float
+    ) -> int:
+        self._ramp_direction = "up"
+        step = self._get_proportional_increase_step(watts_per_amp)
         if self._increase_interval <= 0:
             self._last_current_increase = datetime.now(timezone.utc)
-            return min(target_current, last_current + self._increase_step)
+            limited_current = min(target_current, last_current + step)
+            self._ramp_limited = limited_current != target_current
+            self._current_limit_reason = (
+                "ramp_up_limited" if self._ramp_limited else "target_current"
+            )
+            return limited_current
 
         now = datetime.now(timezone.utc)
         if self._last_current_increase is not None:
             elapsed = (now - self._last_current_increase).total_seconds()
             if elapsed < self._increase_interval:
+                self._ramp_limited = True
+                self._current_limit_reason = "ramp_up_wait"
                 return last_current
 
         self._last_current_increase = now
-        return min(target_current, last_current + self._increase_step)
+        limited_current = min(target_current, last_current + step)
+        self._ramp_limited = limited_current != target_current
+        self._current_limit_reason = (
+            "ramp_up_limited" if self._ramp_limited else "target_current"
+        )
+        return limited_current
+
+    def _get_proportional_increase_step(self, watts_per_amp: float) -> int:
+        if watts_per_amp <= 0:
+            return self._increase_step
+        proportional_step = int(self._unused_export_power // watts_per_amp)
+        return max(self._increase_step, min(proportional_step, self._decrease_step))
+
+    def _get_proportional_decrease_step(self, watts_per_amp: float) -> int:
+        if watts_per_amp <= 0:
+            return self._decrease_step
+        proportional_step = int(self._excess_import_power // watts_per_amp) + 1
+        return max(self._decrease_step, proportional_step)
 
     def _get_start_delay_remaining(self) -> int:
         if self._start_delay_seconds <= 0:
@@ -520,6 +595,17 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     def _reset_residual_export(self) -> None:
         self._residual_export_since = None
+        self._residual_export_remaining = 0
+
+    def _reset_current_diagnostics(self) -> None:
+        self._raw_target_current = None
+        self._unused_export_power = 0
+        self._excess_import_power = 0
+        self._residual_export_remaining = 0
+        self._deadband_active = False
+        self._ramp_limited = False
+        self._ramp_direction = "none"
+        self._current_limit_reason = "target_current"
 
     def _cancel_start_delay(self) -> None:
         if self._start_delay_trigger is not None:
@@ -538,7 +624,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         battery_discharge_power: float | None = None,
         battery_power_used: float | None = None,
         battery_reserve_power: float | None = None,
+        raw_target_current: float | None = None,
         target_current: float | None = None,
+        current_limit_reason: str | None = None,
         decision_reason: str | None = None,
     ) -> None:
         state = SolarBalanceState(
@@ -556,7 +644,17 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             battery_max_charge_power=self._battery_max_charge_power,
             battery_soc=self._battery_soc,
             battery_reserve_power=battery_reserve_power,
+            target_export_power=self._target_export_power,
+            deadband_power=self._deadband_power,
+            raw_target_current=raw_target_current,
             target_current=target_current,
+            unused_export_power=self._unused_export_power,
+            excess_import_power=self._excess_import_power,
+            residual_export_remaining=self._residual_export_remaining,
+            deadband_active=self._deadband_active,
+            ramp_limited=self._ramp_limited,
+            ramp_direction=self._ramp_direction,
+            current_limit_reason=current_limit_reason,
             decision_reason=decision_reason,
         )
         self._entry_data.solar_balance_states[self._port] = state

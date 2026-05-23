@@ -30,6 +30,8 @@ adds experimental solar and home-battery charging logic.
 - Slow current ramp-up and fast ramp-down to reduce unwanted grid imports.
 - Residual export recovery, which increases current by 1A after stable unused
   export remains available.
+- Proportional current correction, so large sustained export can increase
+  current faster while real import can reduce it faster.
 - Automatic home-battery priority based on SOC:
   - low SOC reserves the configured battery charge power for the home battery;
   - medium SOC reserves a smaller configurable amount;
@@ -208,13 +210,20 @@ When enabled, the integration also exposes additional sensors for each port:
 | Calculated total surplus | Total power available to the balancing algorithm. |
 | Battery power used in calculation | Battery contribution used by the algorithm. Positive values reduce EV power, negative values increase available EV power. |
 | Grid power used in calculation | Latest Prism grid power value used by the algorithm. |
-| Calculated target current | Current the algorithm wants to send to Prism. |
+| Calculated target current | Final current the algorithm wants to send to Prism after deadband, ramp and recovery limits. |
+| Raw target current | Current calculated directly from surplus before stabilisation. |
+| Battery reserve power | Home-battery charge power currently protected by the SOC logic. |
+| Target export power | Configured export buffer used by the controller. |
+| Unused export power | Export still available beyond the target export and deadband; this is the power the EV could still recover. |
+| Residual export countdown | Seconds remaining before unused export can trigger a current recovery step. |
 | Decision reason | The current reason for the controller decision. |
 
 The solar balance diagnostic entities also expose extra attributes including
 `battery_soc`, `battery_reserve_power`, `battery_charge_power`,
-`battery_discharge_power`, `available_power`, `target_power` and
-`target_current`.
+`battery_discharge_power`, `available_power`, `target_power`,
+`raw_target_current`, `target_current`, `unused_export_power`,
+`excess_import_power`, `deadband_active`, `ramp_limited`, `ramp_direction` and
+`current_limit_reason`.
 
 ## Entities
 

@@ -204,6 +204,21 @@
             "solar_balance_target_current": {
                 "name": "Calculated target current"
             },
+            "solar_balance_raw_target_current": {
+                "name": "Raw target current"
+            },
+            "solar_balance_battery_reserve_power": {
+                "name": "Battery reserve power"
+            },
+            "solar_balance_target_export_power": {
+                "name": "Target export power"
+            },
+            "solar_balance_unused_export_power": {
+                "name": "Unused export power"
+            },
+            "solar_balance_residual_export_countdown": {
+                "name": "Residual export countdown"
+            },
             "solar_balance_decision_reason": {
                 "name": "Decision reason",
                 "state": {

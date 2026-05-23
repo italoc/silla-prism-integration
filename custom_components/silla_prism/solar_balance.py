@@ -32,7 +32,17 @@ class SolarBalanceState:
     battery_max_charge_power: float | None = None
     battery_soc: float | None = None
     battery_reserve_power: float | None = None
+    target_export_power: float | None = None
+    deadband_power: float | None = None
+    raw_target_current: float | None = None
     target_current: float | None = None
+    unused_export_power: float | None = None
+    excess_import_power: float | None = None
+    residual_export_remaining: int | None = None
+    deadband_active: bool | None = None
+    ramp_limited: bool | None = None
+    ramp_direction: str | None = None
+    current_limit_reason: str | None = None
     decision_reason: str | None = None
 
 
