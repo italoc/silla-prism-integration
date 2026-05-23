@@ -75,7 +75,40 @@ Prerequisites: A working MQTT server.
 6. **Enable virtual sensor**: enables additional sensors derived from the
    original Prism sensors, such as total energy imported from the grid.
 
-7. ![Configure Silla Prism](images/setup2.png)
+7. Configure the integration options. The setup form now includes inline field
+   descriptions and examples for the solar battery balancing options.
+
+   ![Silla Prism configuration connection and battery sensors](images/config-solar-battery-1-connection.png)
+
+   The first part contains the MQTT topic, the maximum current limit, the switch
+   that enables solar battery balancing, and the Home Assistant sensors used for
+   home-battery power and SOC. Select the battery power sensor in W and, if
+   available, the SOC sensor in %. Enable the battery sign option when your
+   battery sensor is positive while discharging and negative while charging.
+
+   ![Silla Prism configuration battery priority and charging phases](images/config-solar-battery-2-battery-priority.png)
+
+   The second part sets the low-SOC battery reserve, the number of EV charging
+   phases, the stable surplus delay, and whether battery charging power can be
+   treated as EV surplus. Use `1` for single-phase charging or `3` for
+   three-phase charging. The stable surplus delay only applies when starting
+   from pause, so an already charging car is not stopped just because the
+   countdown is running.
+
+   ![Silla Prism configuration SOC reserves and ramp settings](images/config-solar-battery-3-reserves-ramp.png)
+
+   The third part defines the SOC thresholds and the power still reserved for
+   the home battery at medium and high SOC. It also sets the target grid export,
+   the import/export deadband, and the minimum interval between current
+   increases. These values decide how aggressively the controller gives direct
+   solar production to the EV while avoiding unwanted grid import.
+
+   ![Silla Prism configuration current steps and residual export recovery](images/config-solar-battery-4-export-recovery.png)
+
+   The last part controls the current ramp steps and residual export recovery.
+   The increase step limits how quickly current rises, the decrease step lets
+   the controller react faster when house loads appear, and residual export
+   recovery adds current again if export remains unused for the configured time.
 
 ## Solar automations
 
