@@ -41,6 +41,33 @@
                     "solar_balance_residual_export_power": "Export residuo per recupero corrente (W)",
                     "solar_balance_residual_export_delay": "Tempo export residuo prima del recupero (s)"
                 },
+                "data_description": {
+                    "topic": "Topic MQTT base configurato su Prism. Esempio: prism/ con slash finale.",
+                    "ports": "Numero di uscite fisiche del Prism. Usa 1 per Prism singolo, 2 per Prism Duo.",
+                    "serial": "Valore opzionale usato per distinguere piu' Prism nello stesso Home Assistant. Esempio: PRISMBOX.",
+                    "vsensors": "Crea sensori calcolati aggiuntivi, ad esempio energia totale prelevata dalla rete.",
+                    "powerwall": "Abilita sensori virtuali compatibili con la vecchia vista Powerwall del progetto originale.",
+                    "maxcurr": "Limite massimo che il bilanciamento puo' impostare sul Prism. Esempio: 16 per non superare 16A.",
+                    "solar_battery_balance": "Crea lo switch che regola automaticamente la corrente in base a solare, rete e batteria casa.",
+                    "battery_power_sensor": "Sensore Home Assistant della potenza batteria casa in W. Esempio: sensor.batteria_potenza.",
+                    "battery_soc_sensor": "Sensore Home Assistant della percentuale batteria casa. Esempio: sensor.batteria_soc.",
+                    "battery_discharge_positive": "Attiva se il sensore batteria e' positivo quando scarica e negativo quando carica. Disattiva se il tuo sensore usa il segno opposto.",
+                    "battery_max_charge_power": "Potenza da riservare alla batteria quando il SOC e' basso. Nel tuo caso il valore tipico e' 2700 W.",
+                    "solar_balance_phases": "Fasi usate dalla ricarica EV. Usa 1 per monofase, 3 per trifase.",
+                    "solar_balance_start_delay": "Minuti di surplus stabile prima di avviare la ricarica da fermo. Esempio: 5 riduce avvii inutili con nuvole brevi.",
+                    "solar_balance_use_battery_charge": "Se attivo, una parte della potenza che sta caricando la batteria casa puo' essere data all'auto oltre la riserva configurata.",
+                    "solar_balance_soc_mid": "Soglia SOC da cui la riserva batteria scende al valore medio. Esempio: 40%.",
+                    "solar_balance_soc_high": "Soglia SOC da cui la priorita' passa maggiormente all'auto. Esempio: 80%.",
+                    "solar_balance_mid_reserve_power": "Potenza ancora riservata alla batteria con SOC medio. Esempio: 1500 W.",
+                    "solar_balance_high_reserve_power": "Potenza ancora riservata alla batteria con SOC alto. Esempio: 1000 W.",
+                    "solar_balance_target_export_power": "Piccolo export voluto verso rete per evitare import accidentale. Esempio: 150 W.",
+                    "solar_balance_deadband_power": "Zona in cui la corrente non cambia. Esempio: 150 W evita oscillazioni continue vicino allo zero.",
+                    "solar_balance_increase_interval": "Secondi minimi tra due aumenti di corrente. Esempio: 15 aumenta gradualmente di giorno.",
+                    "solar_balance_increase_step": "Ampere massimi aggiunti a ogni aumento. Esempio: 1A e' prudente.",
+                    "solar_balance_decrease_step": "Ampere massimi tolti a ogni correzione. Esempio: 3A reagisce piu' velocemente ai carichi di casa.",
+                    "solar_balance_residual_export_power": "Export extra che deve restare inutilizzato prima di recuperare corrente. Esempio: 400 W.",
+                    "solar_balance_residual_export_delay": "Secondi per cui l'export residuo deve rimanere stabile prima di aggiungere corrente. Esempio: 60."
+                },
                 "description": "Inserire i dettagli della connessione al dispositivo",
                 "title": "Configurazione Silla Prsim"
             }

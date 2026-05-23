@@ -41,6 +41,33 @@
                     "solar_balance_residual_export_power": "Residual export for current recovery (W)",
                     "solar_balance_residual_export_delay": "Residual export time before recovery (s)"
                 },
+                "data_description": {
+                    "topic": "Base MQTT topic configured on Prism. Example: prism/ with the trailing slash.",
+                    "ports": "Number of physical Prism outputs. Use 1 for a single Prism, 2 for Prism Duo.",
+                    "serial": "Optional value used to distinguish multiple Prism devices in the same Home Assistant instance. Example: PRISMBOX.",
+                    "vsensors": "Creates additional calculated sensors, such as total grid import energy.",
+                    "powerwall": "Enables virtual sensors compatible with the original project's legacy Powerwall view.",
+                    "maxcurr": "Maximum current the balancer may set on Prism. Example: 16 to never exceed 16A.",
+                    "solar_battery_balance": "Creates the switch that automatically adjusts EV current from solar, grid and home-battery data.",
+                    "battery_power_sensor": "Home Assistant sensor for home-battery power in W. Example: sensor.battery_power.",
+                    "battery_soc_sensor": "Home Assistant sensor for home-battery percentage. Example: sensor.battery_soc.",
+                    "battery_discharge_positive": "Enable when the battery sensor is positive while discharging and negative while charging. Disable it if your sensor uses the opposite sign.",
+                    "battery_max_charge_power": "Power reserved for the home battery when SOC is low. For this setup the typical value is 2700 W.",
+                    "solar_balance_phases": "EV charging phases. Use 1 for single phase, 3 for three phase.",
+                    "solar_balance_start_delay": "Minutes of stable surplus before starting from pause. Example: 5 reduces useless starts during short clouds.",
+                    "solar_balance_use_battery_charge": "When enabled, part of the power currently charging the home battery can be sent to the EV above the configured reserve.",
+                    "solar_balance_soc_mid": "SOC threshold where battery reserve drops to the medium value. Example: 40%.",
+                    "solar_balance_soc_high": "SOC threshold where priority moves more strongly to the EV. Example: 80%.",
+                    "solar_balance_mid_reserve_power": "Power still reserved for the home battery at medium SOC. Example: 1500 W.",
+                    "solar_balance_high_reserve_power": "Power still reserved for the home battery at high SOC. Example: 1000 W.",
+                    "solar_balance_target_export_power": "Small intentional grid export to avoid accidental import. Example: 150 W.",
+                    "solar_balance_deadband_power": "Range where current is left unchanged. Example: 150 W avoids constant oscillation near zero.",
+                    "solar_balance_increase_interval": "Minimum seconds between current increases. Example: 15 ramps up gradually during the day.",
+                    "solar_balance_increase_step": "Maximum amps added at each increase. Example: 1A is conservative.",
+                    "solar_balance_decrease_step": "Maximum amps removed at each correction. Example: 3A reacts faster to house loads.",
+                    "solar_balance_residual_export_power": "Extra export that must remain unused before recovering current. Example: 400 W.",
+                    "solar_balance_residual_export_delay": "Seconds residual export must stay stable before adding current. Example: 60."
+                },
                 "description": "Please enter connection settings of your device",
                 "title": "Configure Silla Prsim Integration"
             }
