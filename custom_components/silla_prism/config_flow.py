@@ -32,6 +32,13 @@ from .const import (
     CONF_SOLAR_BALANCE_SOC_HIGH,
     CONF_SOLAR_BALANCE_MID_RESERVE_POWER,
     CONF_SOLAR_BALANCE_HIGH_RESERVE_POWER,
+    CONF_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+    CONF_SOLAR_BALANCE_DEADBAND_POWER,
+    CONF_SOLAR_BALANCE_INCREASE_INTERVAL,
+    CONF_SOLAR_BALANCE_INCREASE_STEP,
+    CONF_SOLAR_BALANCE_DECREASE_STEP,
+    CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+    CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
     CONF_SOLAR_BATTERY_BALANCE,
     CONF_TOPIC,
     CONF_VSENSORS,
@@ -51,6 +58,13 @@ from .const import (
     DEFAULT_SOLAR_BALANCE_SOC_HIGH,
     DEFAULT_SOLAR_BALANCE_MID_RESERVE_POWER,
     DEFAULT_SOLAR_BALANCE_HIGH_RESERVE_POWER,
+    DEFAULT_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+    DEFAULT_SOLAR_BALANCE_DEADBAND_POWER,
+    DEFAULT_SOLAR_BALANCE_INCREASE_INTERVAL,
+    DEFAULT_SOLAR_BALANCE_INCREASE_STEP,
+    DEFAULT_SOLAR_BALANCE_DECREASE_STEP,
+    DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+    DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
     DEFAULT_SOLAR_BATTERY_BALANCE,
     DEFAULT_TOPIC,
     DEFAULT_VSENSORS,
@@ -115,6 +129,34 @@ SILLA_PRISM_SCHEMA = vol.Schema(
             CONF_SOLAR_BALANCE_HIGH_RESERVE_POWER,
             default=DEFAULT_SOLAR_BALANCE_HIGH_RESERVE_POWER,
         ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+            default=DEFAULT_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+        ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_DEADBAND_POWER,
+            default=DEFAULT_SOLAR_BALANCE_DEADBAND_POWER,
+        ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_INCREASE_INTERVAL,
+            default=DEFAULT_SOLAR_BALANCE_INCREASE_INTERVAL,
+        ): vol.All(vol.Coerce(int), vol.Range(min=0, max=300)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_INCREASE_STEP,
+            default=DEFAULT_SOLAR_BALANCE_INCREASE_STEP,
+        ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_DECREASE_STEP,
+            default=DEFAULT_SOLAR_BALANCE_DECREASE_STEP,
+        ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+            default=DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+        ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
+            default=DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
+        ): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
     }
 )
 
@@ -123,7 +165,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a Silla Prism config flow."""
 
     VERSION = 1
-    MINOR_VERSION = 6
+    MINOR_VERSION = 7
 
     def __init__(self) -> None:
         """Initialize flow."""
@@ -151,6 +193,21 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         self._solar_balance_high_reserve_power: int = (
             DEFAULT_SOLAR_BALANCE_HIGH_RESERVE_POWER
+        )
+        self._solar_balance_target_export_power: int = (
+            DEFAULT_SOLAR_BALANCE_TARGET_EXPORT_POWER
+        )
+        self._solar_balance_deadband_power: int = DEFAULT_SOLAR_BALANCE_DEADBAND_POWER
+        self._solar_balance_increase_interval: int = (
+            DEFAULT_SOLAR_BALANCE_INCREASE_INTERVAL
+        )
+        self._solar_balance_increase_step: int = DEFAULT_SOLAR_BALANCE_INCREASE_STEP
+        self._solar_balance_decrease_step: int = DEFAULT_SOLAR_BALANCE_DECREASE_STEP
+        self._solar_balance_residual_export_power: int = (
+            DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER
+        )
+        self._solar_balance_residual_export_delay: int = (
+            DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY
         )
 
     async def fetch_device_info(self) -> str | None:
@@ -248,6 +305,34 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         self._solar_balance_high_reserve_power = user_input.get(
             CONF_SOLAR_BALANCE_HIGH_RESERVE_POWER,
             DEFAULT_SOLAR_BALANCE_HIGH_RESERVE_POWER,
+        )
+        self._solar_balance_target_export_power = user_input.get(
+            CONF_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+            DEFAULT_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+        )
+        self._solar_balance_deadband_power = user_input.get(
+            CONF_SOLAR_BALANCE_DEADBAND_POWER,
+            DEFAULT_SOLAR_BALANCE_DEADBAND_POWER,
+        )
+        self._solar_balance_increase_interval = user_input.get(
+            CONF_SOLAR_BALANCE_INCREASE_INTERVAL,
+            DEFAULT_SOLAR_BALANCE_INCREASE_INTERVAL,
+        )
+        self._solar_balance_increase_step = user_input.get(
+            CONF_SOLAR_BALANCE_INCREASE_STEP,
+            DEFAULT_SOLAR_BALANCE_INCREASE_STEP,
+        )
+        self._solar_balance_decrease_step = user_input.get(
+            CONF_SOLAR_BALANCE_DECREASE_STEP,
+            DEFAULT_SOLAR_BALANCE_DECREASE_STEP,
+        )
+        self._solar_balance_residual_export_power = user_input.get(
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+            DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+        )
+        self._solar_balance_residual_export_delay = user_input.get(
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
+            DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
         )
         if self._solar_balance_soc_mid > self._solar_balance_soc_high:
             (
@@ -381,6 +466,55 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
                                 DEFAULT_SOLAR_BALANCE_HIGH_RESERVE_POWER,
                             ),
                         ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+                                DEFAULT_SOLAR_BALANCE_TARGET_EXPORT_POWER,
+                            ),
+                        ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_DEADBAND_POWER,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_DEADBAND_POWER,
+                                DEFAULT_SOLAR_BALANCE_DEADBAND_POWER,
+                            ),
+                        ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_INCREASE_INTERVAL,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_INCREASE_INTERVAL,
+                                DEFAULT_SOLAR_BALANCE_INCREASE_INTERVAL,
+                            ),
+                        ): vol.All(vol.Coerce(int), vol.Range(min=0, max=300)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_INCREASE_STEP,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_INCREASE_STEP,
+                                DEFAULT_SOLAR_BALANCE_INCREASE_STEP,
+                            ),
+                        ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_DECREASE_STEP,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_DECREASE_STEP,
+                                DEFAULT_SOLAR_BALANCE_DECREASE_STEP,
+                            ),
+                        ): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+                                DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
+                            ),
+                        ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
+                                DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
+                            ),
+                        ): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
                     }
                 ),
                 errors=errors,
@@ -449,6 +583,21 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_SOLAR_BALANCE_HIGH_RESERVE_POWER: (
                 self._solar_balance_high_reserve_power
             ),
+            CONF_SOLAR_BALANCE_TARGET_EXPORT_POWER: (
+                self._solar_balance_target_export_power
+            ),
+            CONF_SOLAR_BALANCE_DEADBAND_POWER: self._solar_balance_deadband_power,
+            CONF_SOLAR_BALANCE_INCREASE_INTERVAL: (
+                self._solar_balance_increase_interval
+            ),
+            CONF_SOLAR_BALANCE_INCREASE_STEP: self._solar_balance_increase_step,
+            CONF_SOLAR_BALANCE_DECREASE_STEP: self._solar_balance_decrease_step,
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER: (
+                self._solar_balance_residual_export_power
+            ),
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY: (
+                self._solar_balance_residual_export_delay
+            ),
         }
         return self.async_create_entry(
             title="SillaPrism",
@@ -483,6 +632,21 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             CONF_SOLAR_BALANCE_HIGH_RESERVE_POWER: (
                 self._solar_balance_high_reserve_power
+            ),
+            CONF_SOLAR_BALANCE_TARGET_EXPORT_POWER: (
+                self._solar_balance_target_export_power
+            ),
+            CONF_SOLAR_BALANCE_DEADBAND_POWER: self._solar_balance_deadband_power,
+            CONF_SOLAR_BALANCE_INCREASE_INTERVAL: (
+                self._solar_balance_increase_interval
+            ),
+            CONF_SOLAR_BALANCE_INCREASE_STEP: self._solar_balance_increase_step,
+            CONF_SOLAR_BALANCE_DECREASE_STEP: self._solar_balance_decrease_step,
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER: (
+                self._solar_balance_residual_export_power
+            ),
+            CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY: (
+                self._solar_balance_residual_export_delay
             ),
         }
         return self.async_update_reload_and_abort(

@@ -33,7 +33,14 @@
                     "solar_balance_soc_mid": "Medium home battery SOC for EV priority (%)",
                     "solar_balance_soc_high": "High home battery SOC for EV priority (%)",
                     "solar_balance_mid_reserve_power": "Battery reserve power at medium SOC (W)",
-                    "solar_balance_high_reserve_power": "Battery reserve power at high SOC (W)"
+                    "solar_balance_high_reserve_power": "Battery reserve power at high SOC (W)",
+                    "solar_balance_target_export_power": "Target grid export (W)",
+                    "solar_balance_deadband_power": "Import/export deadband (W)",
+                    "solar_balance_increase_interval": "Minimum current increase interval (s)",
+                    "solar_balance_increase_step": "Maximum current increase step (A)",
+                    "solar_balance_decrease_step": "Maximum current decrease step (A)",
+                    "solar_balance_residual_export_power": "Residual export for current recovery (W)",
+                    "solar_balance_residual_export_delay": "Residual export time before recovery (s)"
                 },
                 "description": "Please enter connection settings of your device",
                 "title": "Configure Silla Prsim Integration"

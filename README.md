@@ -26,6 +26,11 @@ adds experimental solar and home-battery charging logic.
   configuration no longer requires manually typing entity IDs.
 - Configurable single-phase or three-phase surplus calculation.
 - Configurable power margin and stable-surplus start delay.
+- Configurable target grid export and import/export deadband to avoid chasing
+  noisy measurements.
+- Slow current ramp-up and fast ramp-down to reduce unwanted grid imports.
+- Residual export recovery, which increases current by 1A after stable unused
+  export remains available.
 - Automatic home-battery priority based on SOC:
   - low SOC reserves the configured battery charge power for the home battery;
   - medium SOC reserves a smaller configurable amount;
@@ -103,12 +108,19 @@ Configure it from the integration setup/reconfigure form:
 | High home battery SOC | SOC threshold where the reserved battery charge power drops to the high reserve. Default is `80`. |
 | Medium SOC battery reserve | Battery charge power, in W, reserved before sending the rest to the EV at medium SOC. Default is `1500`. |
 | High SOC battery reserve | Battery charge power, in W, reserved before sending the rest to the EV at high SOC. Default is `1000`. |
+| Target grid export | Watts to intentionally keep exported as a safety buffer. Default is `150`. |
+| Import/export deadband | Watts around the target export where current is left unchanged. Default is `150`. |
+| Minimum current increase interval | Minimum seconds between upward current steps. Default is `15`. |
+| Maximum current increase step | Maximum amp increase per ramp step. Default is `1`. |
+| Maximum current decrease step | Maximum amp decrease per correction. Default is `3`. |
+| Residual export for current recovery | Extra export that must remain available before adding current beyond the rounded calculation. Default is `400`. |
+| Residual export time before recovery | Seconds residual export must stay above threshold before recovery. Default is `60`. |
 
 The controller uses this formula:
 
 ```text
 available_power = ev_power - grid_power - battery_power_to_exclude
-target_power = available_power - margin
+target_power = available_power - margin - target_grid_export
 ```
 
 ```mermaid
@@ -140,7 +152,7 @@ flowchart TD
     H --> Q["battery_power_to_exclude"]
     P --> Q
     Q --> R["available_power =<br/>ev_power - grid_power - battery_power_to_exclude"]
-    R --> S["target_power =<br/>available_power - margin"]
+    R --> S["target_power =<br/>available_power - margin - target export"]
     S --> T{"Enough for<br/>minimum 6A?"}
 
     T -->|No, EV not charging| U["Pause port<br/>set current limit 6A"]
@@ -149,7 +161,15 @@ flowchart TD
     W -->|No, starting from pause| X["Wait before starting<br/>current limit 6A"]
     W -->|Yes or already charging| Y["target_current =<br/>target_power / voltage / phases"]
     Y --> Z["Clamp target current<br/>between 6A and configured max"]
-    Z --> AA["Publish MQTT commands<br/>set_current_limit + solar mode"]
+    Z --> AB{"Inside import/export<br/>deadband?"}
+    AB -->|Yes| AC["Keep current unchanged"]
+    AB -->|No| AD["Apply ramp limits:<br/>slow up, fast down"]
+    AD --> AE{"Residual export<br/>stable?"}
+    AE -->|Yes| AF["Recover +1A<br/>within max current"]
+    AE -->|No| AG["Use ramped current"]
+    AC --> AA["Publish MQTT commands<br/>set_current_limit + solar mode"]
+    AF --> AA
+    AG --> AA
 ```
 
 With the default sign convention, battery discharge reduces the available EV
@@ -168,6 +188,11 @@ reserves `0 W` so the EV gets priority. This lets the car use direct solar
 energy while still protecting the home battery when it is low. After
 the stable surplus delay expires, the EV current follows the calculated surplus,
 clamped between the Type 2 minimum of 6A and the configured maximum current.
+The controller then applies a target export, a deadband, ramp limits and
+residual export recovery. By default it tries to keep about `150 W` exported,
+ignores changes within `150 W`, increases by at most `1A` every `15` seconds,
+decreases by up to `3A` immediately, and adds `1A` if more than `400 W` remains
+exported for `60` seconds.
 Before starting from pause, the surplus must remain available for the configured
 stable surplus delay. This helps avoid short clouds or transient loads starting
 and stopping the car repeatedly. If the EV is already charging, the countdown

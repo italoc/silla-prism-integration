@@ -33,7 +33,14 @@
                     "solar_balance_soc_mid": "SOC batteria medio per priorità auto (%)",
                     "solar_balance_soc_high": "SOC batteria alto per priorità auto (%)",
                     "solar_balance_mid_reserve_power": "Potenza riservata alla batteria con SOC medio (W)",
-                    "solar_balance_high_reserve_power": "Potenza riservata alla batteria con SOC alto (W)"
+                    "solar_balance_high_reserve_power": "Potenza riservata alla batteria con SOC alto (W)",
+                    "solar_balance_target_export_power": "Export rete desiderato (W)",
+                    "solar_balance_deadband_power": "Banda morta import/export (W)",
+                    "solar_balance_increase_interval": "Intervallo minimo aumento corrente (s)",
+                    "solar_balance_increase_step": "Step massimo aumento corrente (A)",
+                    "solar_balance_decrease_step": "Step massimo riduzione corrente (A)",
+                    "solar_balance_residual_export_power": "Export residuo per recupero corrente (W)",
+                    "solar_balance_residual_export_delay": "Tempo export residuo prima del recupero (s)"
                 },
                 "description": "Inserire i dettagli della connessione al dispositivo",
                 "title": "Configurazione Silla Prsim"

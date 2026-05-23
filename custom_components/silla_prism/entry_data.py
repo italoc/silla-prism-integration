@@ -30,5 +30,12 @@ class RuntimeEntryData:
     solar_balance_soc_high: int
     solar_balance_mid_reserve_power: int
     solar_balance_high_reserve_power: int
+    solar_balance_target_export_power: int
+    solar_balance_deadband_power: int
+    solar_balance_increase_interval: int
+    solar_balance_increase_step: int
+    solar_balance_decrease_step: int
+    solar_balance_residual_export_power: int
+    solar_balance_residual_export_delay: int
     devices: list[DeviceInfo]
     solar_balance_states: dict[int, SolarBalanceState] = field(default_factory=dict)
