@@ -90,7 +90,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._battery_discharge_positive = entry_data.battery_discharge_positive
         self._battery_max_charge_power = entry_data.battery_max_charge_power
         self._phases = entry_data.solar_balance_phases
-        self._margin = entry_data.solar_balance_margin
         self._start_delay_seconds = entry_data.solar_balance_start_delay * 60
         self._use_battery_charge = entry_data.solar_balance_use_battery_charge
         self._soc_mid = entry_data.solar_balance_soc_mid
@@ -313,7 +312,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             battery_charge_available if self._use_battery_charge else 0
         )
         available_power = self._ev_power - self._grid_power - battery_power_to_exclude
-        target_power = available_power - self._margin - self._target_export_power
+        target_power = available_power - self._target_export_power
         min_power = MIN_CHARGE_CURRENT * voltage * self._phases
         already_charging = self._is_charging_from_surplus(min_power)
 

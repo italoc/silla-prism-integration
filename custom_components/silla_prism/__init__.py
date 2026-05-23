@@ -19,7 +19,6 @@ from .const import (
     CONF_PORTS,
     CONF_POWERWALL,
     CONF_SERIAL,
-    CONF_SOLAR_BALANCE_MARGIN,
     CONF_SOLAR_BALANCE_PHASES,
     CONF_SOLAR_BALANCE_START_DELAY,
     CONF_SOLAR_BALANCE_USE_BATTERY_CHARGE,
@@ -45,7 +44,6 @@ from .const import (
     DEFAULT_PORTS,
     DEFAULT_POWERWALL,
     DEFAULT_SERIAL,
-    DEFAULT_SOLAR_BALANCE_MARGIN,
     DEFAULT_SOLAR_BALANCE_PHASES,
     DEFAULT_SOLAR_BALANCE_START_DELAY,
     DEFAULT_SOLAR_BALANCE_USE_BATTERY_CHARGE,
@@ -120,9 +118,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     _solar_balance_phases = entry.data.get(
         CONF_SOLAR_BALANCE_PHASES, DEFAULT_SOLAR_BALANCE_PHASES
-    )
-    _solar_balance_margin = entry.data.get(
-        CONF_SOLAR_BALANCE_MARGIN, DEFAULT_SOLAR_BALANCE_MARGIN
     )
     _solar_balance_start_delay = entry.data.get(
         CONF_SOLAR_BALANCE_START_DELAY, DEFAULT_SOLAR_BALANCE_START_DELAY
@@ -212,7 +207,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         battery_discharge_positive=_battery_discharge_positive,
         battery_max_charge_power=_battery_max_charge_power,
         solar_balance_phases=_solar_balance_phases,
-        solar_balance_margin=_solar_balance_margin,
         solar_balance_start_delay=_solar_balance_start_delay,
         solar_balance_use_battery_charge=_solar_balance_use_battery_charge,
         solar_balance_soc_mid=_solar_balance_soc_mid,

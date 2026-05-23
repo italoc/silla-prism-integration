@@ -25,9 +25,8 @@ adds experimental solar and home-battery charging logic.
 - Entity selectors for both the home-battery power sensor and SOC sensor, so the
   configuration no longer requires manually typing entity IDs.
 - Configurable single-phase or three-phase surplus calculation.
-- Configurable power margin and stable-surplus start delay.
-- Configurable target grid export and import/export deadband to avoid chasing
-  noisy measurements.
+- Configurable target grid export, import/export deadband and stable-surplus
+  start delay to avoid chasing noisy measurements.
 - Slow current ramp-up and fast ramp-down to reduce unwanted grid imports.
 - Residual export recovery, which increases current by 1A after stable unused
   export remains available.
@@ -101,7 +100,6 @@ Configure it from the integration setup/reconfigure form:
 | Battery discharge is a positive value | Enable this if the sensor is positive while the battery is discharging and negative while charging. Disable it if your sensor uses the opposite sign. |
 | Maximum battery charge power | Battery charge power, in W, reserved for the home battery while SOC is low. Default is `2700`. |
 | Number of charging phases | Use `1` for single phase or `3` for three phase charging. |
-| Power margin | Watts to keep as a buffer before sending power to the car. |
 | Stable surplus delay | Minutes of continuous surplus required before the integration starts charging. The default is `5`. |
 | Use battery charge as surplus | When enabled, battery charging power is also treated as available EV surplus. This gives the car priority over storing that solar energy first. |
 | Medium home battery SOC | SOC threshold where the reserved battery charge power drops to the medium reserve. Default is `40`. |
@@ -120,7 +118,7 @@ The controller uses this formula:
 
 ```text
 available_power = ev_power - grid_power - battery_power_to_exclude
-target_power = available_power - margin - target_grid_export
+target_power = available_power - target_grid_export
 ```
 
 ```mermaid
@@ -152,7 +150,7 @@ flowchart TD
     H --> Q["battery_power_to_exclude"]
     P --> Q
     Q --> R["available_power =<br/>ev_power - grid_power - battery_power_to_exclude"]
-    R --> S["target_power =<br/>available_power - margin - target export"]
+    R --> S["target_power =<br/>available_power - target export"]
     S --> T{"Enough for<br/>minimum 6A?"}
 
     T -->|No, EV not charging| U["Pause port<br/>set current limit 6A"]

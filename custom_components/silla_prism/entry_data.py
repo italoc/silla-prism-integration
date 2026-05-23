@@ -23,7 +23,6 @@ class RuntimeEntryData:
     battery_discharge_positive: bool
     battery_max_charge_power: int
     solar_balance_phases: int
-    solar_balance_margin: int
     solar_balance_start_delay: int
     solar_balance_use_battery_charge: bool
     solar_balance_soc_mid: int

@@ -27,7 +27,6 @@
                     "battery_discharge_positive": "La batteria in scarica ha valore positivo",
                     "battery_max_charge_power": "Potenza riservata alla batteria con SOC basso (W)",
                     "solar_balance_phases": "Numero fasi usate per la ricarica",
-                    "solar_balance_margin": "Margine di potenza da lasciare prima della ricarica (W)",
                     "solar_balance_start_delay": "Tempo minimo di surplus stabile prima della ricarica (minuti)",
                     "solar_balance_use_battery_charge": "Considera anche la carica batteria come surplus per l'auto",
                     "solar_balance_soc_mid": "SOC batteria medio per priorità auto (%)",

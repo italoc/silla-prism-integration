@@ -24,7 +24,6 @@ from .const import (
     CONF_PORTS,
     CONF_POWERWALL,
     CONF_SERIAL,
-    CONF_SOLAR_BALANCE_MARGIN,
     CONF_SOLAR_BALANCE_PHASES,
     CONF_SOLAR_BALANCE_START_DELAY,
     CONF_SOLAR_BALANCE_USE_BATTERY_CHARGE,
@@ -50,7 +49,6 @@ from .const import (
     DEFAULT_PORTS,
     DEFAULT_POWERWALL,
     DEFAULT_SERIAL,
-    DEFAULT_SOLAR_BALANCE_MARGIN,
     DEFAULT_SOLAR_BALANCE_PHASES,
     DEFAULT_SOLAR_BALANCE_START_DELAY,
     DEFAULT_SOLAR_BALANCE_USE_BATTERY_CHARGE,
@@ -104,9 +102,6 @@ SILLA_PRISM_SCHEMA = vol.Schema(
         vol.Optional(
             CONF_SOLAR_BALANCE_PHASES, default=DEFAULT_SOLAR_BALANCE_PHASES
         ): vol.In([1, 3]),
-        vol.Optional(
-            CONF_SOLAR_BALANCE_MARGIN, default=DEFAULT_SOLAR_BALANCE_MARGIN
-        ): cv.positive_int,
         vol.Optional(
             CONF_SOLAR_BALANCE_START_DELAY,
             default=DEFAULT_SOLAR_BALANCE_START_DELAY,
@@ -180,7 +175,6 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         self._battery_discharge_positive: bool = DEFAULT_BATTERY_DISCHARGE_POSITIVE
         self._battery_max_charge_power: int = DEFAULT_BATTERY_MAX_CHARGE_POWER
         self._solar_balance_phases: int = DEFAULT_SOLAR_BALANCE_PHASES
-        self._solar_balance_margin: int = DEFAULT_SOLAR_BALANCE_MARGIN
         self._solar_balance_start_delay: int = DEFAULT_SOLAR_BALANCE_START_DELAY
         self._solar_balance_use_battery_charge: bool = (
             DEFAULT_SOLAR_BALANCE_USE_BATTERY_CHARGE
@@ -281,9 +275,6 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         self._solar_balance_phases = user_input.get(
             CONF_SOLAR_BALANCE_PHASES, DEFAULT_SOLAR_BALANCE_PHASES
-        )
-        self._solar_balance_margin = user_input.get(
-            CONF_SOLAR_BALANCE_MARGIN, DEFAULT_SOLAR_BALANCE_MARGIN
         )
         self._solar_balance_start_delay = user_input.get(
             CONF_SOLAR_BALANCE_START_DELAY, DEFAULT_SOLAR_BALANCE_START_DELAY
@@ -417,13 +408,6 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
                                 DEFAULT_SOLAR_BALANCE_PHASES,
                             ),
                         ): vol.In([1, 3]),
-                        vol.Optional(
-                            CONF_SOLAR_BALANCE_MARGIN,
-                            default=entry.data.get(
-                                CONF_SOLAR_BALANCE_MARGIN,
-                                DEFAULT_SOLAR_BALANCE_MARGIN,
-                            ),
-                        ): cv.positive_int,
                         vol.Optional(
                             CONF_SOLAR_BALANCE_START_DELAY,
                             default=entry.data.get(
@@ -570,7 +554,6 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_BATTERY_DISCHARGE_POSITIVE: self._battery_discharge_positive,
             CONF_BATTERY_MAX_CHARGE_POWER: self._battery_max_charge_power,
             CONF_SOLAR_BALANCE_PHASES: self._solar_balance_phases,
-            CONF_SOLAR_BALANCE_MARGIN: self._solar_balance_margin,
             CONF_SOLAR_BALANCE_START_DELAY: self._solar_balance_start_delay,
             CONF_SOLAR_BALANCE_USE_BATTERY_CHARGE: (
                 self._solar_balance_use_battery_charge
@@ -620,7 +603,6 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_BATTERY_DISCHARGE_POSITIVE: self._battery_discharge_positive,
             CONF_BATTERY_MAX_CHARGE_POWER: self._battery_max_charge_power,
             CONF_SOLAR_BALANCE_PHASES: self._solar_balance_phases,
-            CONF_SOLAR_BALANCE_MARGIN: self._solar_balance_margin,
             CONF_SOLAR_BALANCE_START_DELAY: self._solar_balance_start_delay,
             CONF_SOLAR_BALANCE_USE_BATTERY_CHARGE: (
                 self._solar_balance_use_battery_charge

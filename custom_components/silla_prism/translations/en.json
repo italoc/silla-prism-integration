@@ -27,7 +27,6 @@
                     "battery_discharge_positive": "Battery discharge is a positive value",
                     "battery_max_charge_power": "Battery reserve power at low SOC (W)",
                     "solar_balance_phases": "Number of charging phases",
-                    "solar_balance_margin": "Power margin to keep before charging (W)",
                     "solar_balance_start_delay": "Minimum stable surplus time before charging (minutes)",
                     "solar_balance_use_battery_charge": "Also treat battery charging power as EV surplus",
                     "solar_balance_soc_mid": "Medium home battery SOC for EV priority (%)",
