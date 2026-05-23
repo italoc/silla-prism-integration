@@ -156,56 +156,18 @@ target_power = available_power - target_grid_export
 
 ```mermaid
 flowchart TD
-    A["Controller wake-up<br/>MQTT grid, EV power, voltage<br/>or HA battery sensor update"] --> B{"Required data<br/>available?"}
-    B -->|No| C["Wait for grid power,<br/>EV power and battery power"]
-    B -->|Yes| D["Normalize battery sign<br/>using the configured convention"]
+    A["Read live data<br/>grid, EV power, voltage,<br/>home battery power and SOC"] --> B["Protect the home battery<br/>reserve more power at low SOC,<br/>reserve less at high SOC"]
+    B --> C["Calculate EV surplus<br/>available_power = EV power - grid power<br/>minus battery power to exclude"]
+    C --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
+    D --> E{"Enough surplus<br/>for at least 6A?"}
 
-    D --> E["battery_discharge_power = max(battery_power, 0)<br/>battery_charge_power = max(-battery_power, 0)"]
-    E --> F{"Home battery<br/>SOC available?"}
-    F -->|No| G["Reserve low-SOC power<br/>default 2700 W"]
-    F -->|Yes| H{"SOC band"}
-    H -->|Low| G
-    H -->|Medium| I["Reserve medium-SOC power<br/>default 1500 W"]
-    H -->|High| J["Reserve high-SOC power<br/>default 1000 W"]
-    H -->|>= 95%| K["Reserve 0 W<br/>EV priority"]
+    E -->|No, EV stopped| F["Pause Prism<br/>and wait for stable surplus"]
+    E -->|No, EV already charging| G["Keep charging at 6A<br/>do not stop the session"]
+    E -->|Yes| H["Convert surplus to target current<br/>and clamp between 6A and max current"]
 
-    G --> L["battery_charge_available =<br/>max(charge_power - reserve_power, 0)"]
-    I --> L
-    J --> L
-    K --> L
-
-    L --> M{"Use battery charge<br/>as EV surplus?"}
-    M -->|No| N["battery_power_to_exclude =<br/>battery_discharge_power"]
-    M -->|Yes| O["battery_power_to_exclude =<br/>battery_discharge_power - battery_charge_available"]
-
-    N --> P["available_power =<br/>ev_power - grid_power - battery_power_to_exclude"]
-    O --> P
-    P --> Q["target_power =<br/>available_power - target_grid_export"]
-    Q --> R["minimum_power =<br/>6A * voltage * phases"]
-    R --> S{"target_power >=<br/>minimum_power?"}
-
-    S -->|No, EV not charging| T["Pause Prism<br/>publish 6A + paused mode"]
-    S -->|No, EV already charging| U["Keep charging<br/>publish 6A + solar mode"]
-    S -->|Yes| V{"Starting from pause<br/>and stable delay<br/>still running?"}
-    V -->|Yes| W["Wait, keep current limit at 6A<br/>do not start yet"]
-    V -->|No| X["raw_current = floor(target_power / voltage / phases)<br/>clamp between 6A and max current"]
-
-    X --> Y{"grid_power + target_export<br/>inside deadband?"}
-    Y -->|Yes| Z["Keep last current<br/>avoid oscillation"]
-    Y -->|No| AA{"Residual export<br/>above threshold<br/>for configured delay?"}
-    AA -->|Yes| AB["Request recovery:<br/>last current + increase step"]
-    AA -->|No| AC["Use raw calculated current"]
-
-    AB --> AD{"Current direction"}
-    AC --> AD
-    AD -->|Increase| AE["Limit ramp-up:<br/>increase_step every increase_interval"]
-    AD -->|Decrease| AF["Limit ramp-down:<br/>decrease_step per correction"]
-    AD -->|Same| AG["Keep current"]
-
-    Z --> AH["Publish MQTT commands<br/>set_current_limit + solar mode"]
-    AE --> AH
-    AF --> AH
-    AG --> AH
+    H --> I["Stabilize current<br/>deadband avoids oscillation<br/>slow ramp-up and faster ramp-down"]
+    I --> J["Recover unused export<br/>add current if export stays available"]
+    J --> K["Publish MQTT commands<br/>set_current_limit and solar mode"]
 ```
 
 With the default sign convention, battery discharge reduces the available EV
