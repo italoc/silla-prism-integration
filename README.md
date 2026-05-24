@@ -112,11 +112,6 @@ Prerequisites: A working MQTT server.
    the controller react faster when house loads appear, and residual export
    recovery adds current again if export remains unused for the configured time.
 
-## Solar automations
-
-Solar automation is a work in progress and is described in the [Solar](solar.md)
-page.
-
 ## Solar battery balancing
 
 The integration can optionally create a `Solar battery balancing` switch for each
