@@ -30,7 +30,7 @@ from .entry_data import RuntimeEntryData
 from .solar_balance import (
     SOLAR_BALANCE_CHARGING_SURPLUS,
     SOLAR_BALANCE_DISABLED,
-    SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
+    SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
     SOLAR_BALANCE_WAITING_DATA,
     SolarBalanceState,
@@ -118,6 +118,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._grid_voltage: float | None = None
         self._battery_power: float | None = None
         self._battery_soc: float | None = None
+        self._reported_current_limit: int | None = None
         self._last_current_command: int | None = None
         self._last_current_increase: datetime | None = None
         self._last_mode_command: str | None = None
@@ -174,6 +175,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     self.hass,
                     f"{self._base_topic}{self._port}/w",
                     self._mqtt_ev_power_received,
+                ),
+                await mqtt.async_subscribe(
+                    self.hass,
+                    f"{self._base_topic}{self._port}/pilot",
+                    self._mqtt_current_limit_received,
                 ),
                 await mqtt.async_subscribe(
                     self.hass,
@@ -255,6 +261,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
     @callback
     def _mqtt_ev_power_received(self, msg) -> None:
         self._ev_power = self._parse_state(msg.payload)
+        self.hass.async_create_task(self._async_update_balance())
+
+    @callback
+    def _mqtt_current_limit_received(self, msg) -> None:
+        current_limit = self._parse_state(msg.payload)
+        self._reported_current_limit = (
+            None if current_limit is None else int(current_limit)
+        )
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
@@ -343,47 +357,33 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         if target_power < min_power:
             self._reset_start_delay()
             self._reset_residual_export()
-            if already_charging:
-                self._charging_from_surplus = True
-                self._update_solar_balance_state(
-                    SOLAR_BALANCE_CHARGING_SURPLUS,
-                    MIN_CHARGE_CURRENT,
-                    available_power,
-                    target_power,
-                    0,
-                    battery_power,
-                    battery_charge_power,
-                    battery_discharge_power,
-                    battery_power_to_exclude,
-                    battery_reserve_power,
-                    raw_target_current=MIN_CHARGE_CURRENT,
-                    target_current=MIN_CHARGE_CURRENT,
-                    current_limit_reason="low_surplus_hold_6a",
-                    decision_reason=SOLAR_BALANCE_CHARGING_SURPLUS,
-                )
-                await self._async_publish_current(MIN_CHARGE_CURRENT)
-                await self._async_publish_mode(MODE_SOLAR)
-                return
-
-            self._charging_from_surplus = False
+            self._charging_from_surplus = True
+            manual_current = self._get_manual_current_override()
+            target_current = manual_current or MIN_CHARGE_CURRENT
+            current_limit_reason = (
+                "manual_current_override"
+                if manual_current is not None
+                else "low_surplus_hold_6a"
+            )
             self._update_solar_balance_state(
-                SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
-                0,
+                SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
+                target_current,
                 available_power,
                 target_power,
-                None,
+                0,
                 battery_power,
                 battery_charge_power,
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
-                raw_target_current=0,
-                target_current=0,
-                current_limit_reason="paused_low_surplus",
-                decision_reason="paused_low_surplus",
+                raw_target_current=MIN_CHARGE_CURRENT,
+                target_current=target_current,
+                current_limit_reason=current_limit_reason,
+                decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
             )
-            await self._async_publish_current(MIN_CHARGE_CURRENT)
-            await self._async_publish_mode(MODE_PAUSED)
+            if manual_current is None:
+                await self._async_publish_current(MIN_CHARGE_CURRENT)
+            await self._async_publish_mode(MODE_SOLAR)
             return
 
         target_current = floor(target_power / (voltage * self._phases))
@@ -441,6 +441,17 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
     def _is_charging_from_surplus(self, min_power: float) -> bool:
         """Return True when Prism appears to be actively charging already."""
         return self._charging_from_surplus or self._ev_power >= min_power * 0.5
+
+    def _get_manual_current_override(self) -> int | None:
+        """Return the reported current if it appears to be a manual override."""
+        if (
+            self._reported_current_limit is None
+            or self._last_current_command is None
+            or self._reported_current_limit == self._last_current_command
+            or self._reported_current_limit < MIN_CHARGE_CURRENT
+        ):
+            return None
+        return min(self._reported_current_limit, self._max_current)
 
     def _get_battery_reserve_power(self) -> float:
         """Return how much battery charge power should be reserved for home storage."""

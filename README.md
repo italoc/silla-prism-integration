@@ -37,9 +37,10 @@ adds experimental solar and home-battery charging logic.
   - medium SOC reserves a smaller configurable amount;
   - high SOC reserves an even smaller configurable amount;
   - SOC >= 95% gives priority to the EV.
-- When the EV is already charging, temporary low surplus no longer pauses the
-  port; the controller keeps the EVSE in solar mode at 6A and raises current
-  again when surplus returns.
+- In solar mode, temporary low surplus no longer pauses the port; the
+  controller keeps the EVSE in solar mode at 6A and raises current again when
+  surplus returns. If the current limit was changed manually, that manual limit
+  is preserved while low surplus remains.
 - Diagnostic sensors for calculated surplus, target current, grid power,
   battery power used in the calculation and controller decision reason.
 
@@ -93,9 +94,9 @@ Prerequisites: A working MQTT server.
    The second part sets the low-SOC battery reserve, the number of EV charging
    phases, the stable surplus delay, and whether battery charging power can be
    treated as EV surplus. Use `1` for single-phase charging or `3` for
-   three-phase charging. The stable surplus delay only applies when starting
-   from pause, so an already charging car is not stopped just because the
-   countdown is running.
+   three-phase charging. In solar mode, low surplus is held at 6A instead of
+   pausing the port, so the delay only affects when current can rise above the
+   minimum.
 
    ![Silla Prism configuration SOC reserves and ramp settings](images/config-solar-battery-3-reserves-ramp.png)
 
@@ -158,10 +159,10 @@ flowchart TD
     C --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
     D --> E{"Enough surplus<br/>for at least 6A?"}
 
-    E -->|No, EV stopped| F["Pause Prism<br/>and wait for stable surplus"]
-    E -->|No, EV already charging| G["Keep charging at 6A<br/>do not stop the session"]
+    E -->|No| F["Keep Prism in solar mode<br/>hold 6A unless current was changed manually"]
     E -->|Yes| H["Convert surplus to target current<br/>and clamp between 6A and max current"]
 
+    F --> K["Publish MQTT commands<br/>set_current_limit and solar mode"]
     H --> I["Stabilize current<br/>deadband avoids oscillation<br/>slow ramp-up and faster ramp-down"]
     I --> J["Recover unused export<br/>add current if export stays available"]
     J --> K["Publish MQTT commands<br/>set_current_limit and solar mode"]
@@ -170,9 +171,10 @@ flowchart TD
 With the default sign convention, battery discharge reduces the available EV
 power, while battery charge is not counted as available power. This means the
 car uses exported solar surplus instead of slowing down battery charging. If the
-available power is below the minimum Type 2 current of 6A, the port is paused;
-when enough surplus returns, the port is switched back to solar mode and the
-current limit is updated.
+available power is below the minimum Type 2 current of 6A while solar balancing
+is enabled, the port is kept in solar mode at 6A instead of being paused. If the
+current limit was changed manually, the controller preserves that manual limit
+while low surplus remains.
 If `Use battery charge as surplus` is enabled, battery charging power is counted
 too, but only for the part that exceeds the battery charge power currently
 reserved for the home battery. Without a SOC sensor, the fixed reserve is the
@@ -180,26 +182,25 @@ configured maximum battery charge power. With a SOC sensor, the reserve is
 dynamic: low SOC reserves the configured maximum charge power, medium SOC
 reserves the medium value, high SOC reserves the high value, and SOC >= 95%
 reserves `0 W` so the EV gets priority. This lets the car use direct solar
-energy while still protecting the home battery when it is low. After
-the stable surplus delay expires, the EV current follows the calculated surplus,
-clamped between the Type 2 minimum of 6A and the configured maximum current.
+energy while still protecting the home battery when it is low. The EV current
+follows the calculated surplus, clamped between the Type 2 minimum of 6A and the
+configured maximum current.
 The controller then applies a target export, a deadband, ramp limits and
 residual export recovery. By default it tries to keep about `150 W` exported,
 ignores changes within `150 W`, increases by at most `1A` every `15` seconds,
 decreases by up to `3A` immediately, and adds `1A` if more than `400 W` remains
 exported for `60` seconds.
-Before starting from pause, the surplus must remain available for the configured
-stable surplus delay. This helps avoid short clouds or transient loads starting
-and stopping the car repeatedly. If the EV is already charging, the countdown
-does not pause the port; the current keeps following the calculated surplus. If
-surplus drops below the Type 2 minimum while the EV is already charging, the port
-is kept in solar mode at 6A instead of being paused.
+Before raising current above the minimum from a low-surplus hold, the surplus
+can be delayed by the configured ramp and stabilization settings. This helps
+avoid short clouds or transient loads repeatedly changing the car current. If
+surplus drops below the Type 2 minimum, the port is kept in solar mode at 6A
+instead of being paused.
 
 When enabled, the integration also exposes additional sensors for each port:
 
 | Entity | Description |
 | ------ | ----------- |
-| Solar balance status | Shows whether balancing is disabled, waiting for data, waiting for stable surplus, paused for low surplus or charging from surplus. |
+| Solar balance status | Shows whether balancing is disabled, waiting for data, waiting for stable surplus, holding at 6A for low surplus or charging from surplus. |
 | Solar surplus current | Current in amps currently available from the calculated solar surplus. |
 | Stable surplus countdown | Seconds remaining before the integration starts charging automatically. |
 | Calculated total surplus | Total power available to the balancing algorithm. |
