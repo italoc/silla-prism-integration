@@ -121,6 +121,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._last_current_command: int | None = None
         self._last_current_increase: datetime | None = None
         self._last_mode_command: str | None = None
+        self._reported_mode: str | None = None
         self._raw_target_current: int | None = None
         self._unused_export_power: float = 0
         self._excess_import_power: float = 0
@@ -178,6 +179,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     self.hass,
                     f"{self._base_topic}{self._port}/volt",
                     self._mqtt_grid_voltage_received,
+                ),
+                await mqtt.async_subscribe(
+                    self.hass,
+                    f"{self._base_topic}{self._port}/mode",
+                    self._mqtt_mode_received,
                 ),
             ]
         )
@@ -254,6 +260,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
     @callback
     def _mqtt_grid_voltage_received(self, msg) -> None:
         self._grid_voltage = self._parse_state(msg.payload)
+        self.hass.async_create_task(self._async_update_balance())
+
+    @callback
+    def _mqtt_mode_received(self, msg) -> None:
+        mode = str(msg.payload)
+        if mode == "7":
+            mode = MODE_PAUSED
+        self._reported_mode = mode
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
@@ -683,7 +697,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         )
 
     async def _async_publish_mode(self, mode: str) -> None:
-        if self._last_mode_command == mode:
+        if self._last_mode_command == mode and self._reported_mode in (None, mode):
             return
         self._last_mode_command = mode
         await mqtt.async_publish(
