@@ -64,7 +64,7 @@ Prerequisites: A working MQTT server.
 
 2. Keep note of base path for all Prism topics
 
-   ![Prism custom MQTT setup](images/setup-mqtt-custom.png)
+   <img alt="Prism custom MQTT setup" src="images/setup-mqtt-custom.png" width="420">
 
 3. **Topic**: set the base path for all Prism topics. It must match the value
    configured in Prism. Keep the trailing **/** at the end of the topic.
@@ -83,7 +83,7 @@ Prerequisites: A working MQTT server.
 7. Configure the integration options. The setup form now includes inline field
    descriptions and examples for the solar battery balancing options.
 
-   ![Silla Prism configuration connection and battery sensors](images/config-solar-battery-1-connection.png)
+   <img alt="Silla Prism configuration connection and battery sensors" src="images/config-solar-battery-1-connection.png" width="520">
 
    The first part contains the MQTT topic, the maximum current limit, the switch
    that enables solar battery balancing, and the Home Assistant sensors used for
@@ -91,7 +91,7 @@ Prerequisites: A working MQTT server.
    available, the SOC sensor in %. Enable the battery sign option when your
    battery sensor is positive while discharging and negative while charging.
 
-   ![Silla Prism configuration battery priority and charging phases](images/config-solar-battery-2-battery-priority.png)
+   <img alt="Silla Prism configuration battery priority and charging phases" src="images/config-solar-battery-2-battery-priority.png" width="520">
 
    The second part sets the low-SOC battery reserve, the number of EV charging
    phases, the stable surplus delay, and whether battery charging power can be
@@ -100,7 +100,7 @@ Prerequisites: A working MQTT server.
    pausing the port, so the delay only affects when current can rise above the
    minimum.
 
-   ![Silla Prism configuration SOC reserves and ramp settings](images/config-solar-battery-3-reserves-ramp.png)
+   <img alt="Silla Prism configuration SOC reserves and ramp settings" src="images/config-solar-battery-3-reserves-ramp.png" width="520">
 
    The third part defines the SOC thresholds and the power still reserved for
    the home battery at medium and high SOC. It also sets the target grid export,
@@ -108,7 +108,7 @@ Prerequisites: A working MQTT server.
    increases. These values decide how aggressively the controller gives direct
    solar production to the EV while avoiding unwanted grid import.
 
-   ![Silla Prism configuration current steps and residual export recovery](images/config-solar-battery-4-export-recovery.png)
+   <img alt="Silla Prism configuration current steps and residual export recovery" src="images/config-solar-battery-4-export-recovery.png" width="520">
 
    The last part controls the current ramp steps and residual export recovery.
    The increase step limits how quickly current rises, the decrease step lets
@@ -265,7 +265,7 @@ Computed entities are not directly measured from Prism but are derived from othe
 
 ## With the charger card integration
 
-![Charger](images/setup4.png)
+<img alt="EV Charger Card preview" src="images/charger-card-preview.png" width="360">
 
 It's possible to configure the [EV Charger Card](https://github.com/tmjo/charger-card) using the configuration example [provided](https://github.com/persuader72/custom-components/blob/main/charger-card/template.yaml) in this repository 
 
