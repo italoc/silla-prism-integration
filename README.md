@@ -64,7 +64,7 @@ Prerequisites: A working MQTT server.
 
 2. Keep note of base path for all Prism topics
 
-   ![Prism manual](images/setup3.png)
+   ![Prism custom MQTT setup](images/setup-mqtt-custom.png)
 
 3. **Topic**: set the base path for all Prism topics. It must match the value
    configured in Prism. Keep the trailing **/** at the end of the topic.
