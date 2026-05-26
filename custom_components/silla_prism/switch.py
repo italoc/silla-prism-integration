@@ -31,6 +31,7 @@ from .solar_balance import (
     SOLAR_BALANCE_CHARGING_SURPLUS,
     SOLAR_BALANCE_DISABLED,
     SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
+    SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
     SOLAR_BALANCE_WAITING_DATA,
     SolarBalanceState,
@@ -44,6 +45,7 @@ DEFAULT_GRID_VOLTAGE = 230.0
 MODE_SOLAR = "1"
 MODE_NORMAL = "2"
 MODE_PAUSED = "3"
+MODE_AUTOLIMIT = "7"
 
 
 async def async_setup_entry(
@@ -278,10 +280,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     @callback
     def _mqtt_mode_received(self, msg) -> None:
-        mode = str(msg.payload)
-        if mode == "7":
-            mode = MODE_PAUSED
-        self._reported_mode = mode
+        self._reported_mode = str(msg.payload)
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
@@ -357,6 +356,26 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         if target_power < min_power:
             self._reset_start_delay()
             self._reset_residual_export()
+            if self._reported_mode == MODE_AUTOLIMIT:
+                self._charging_from_surplus = False
+                self._update_solar_balance_state(
+                    SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
+                    0,
+                    available_power,
+                    target_power,
+                    None,
+                    battery_power,
+                    battery_charge_power,
+                    battery_discharge_power,
+                    battery_power_to_exclude,
+                    battery_reserve_power,
+                    raw_target_current=0,
+                    target_current=0,
+                    current_limit_reason="autolimit_low_surplus",
+                    decision_reason=SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
+                )
+                return
+
             self._charging_from_surplus = True
             manual_current = self._get_manual_current_override()
             target_current = manual_current or MIN_CHARGE_CURRENT

@@ -395,6 +395,7 @@ SOLAR_BALANCE_SENSORS: tuple[PrismSolarBalanceSensorEntityDescription, ...] = (
             SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
             SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
             SOLAR_BALANCE_CHARGING_SURPLUS,
+            SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
         ],
         has_entity_name=True,
         translation_key="solar_balance_status",
