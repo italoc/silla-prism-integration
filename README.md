@@ -171,7 +171,7 @@ used for this direct calculation because on some installations they stay at
 ```text
 available_power = solar_production - home_load_power
 if use_battery_charge:
-    available_power += battery_charge_available_above_reserve
+    available_power += battery_charge_available_above_reserve only when solar_production > home_load_power
 target_power = available_power - target_grid_export
 ```
 
@@ -202,7 +202,8 @@ power in the fallback estimator, while battery charge is not counted as availabl
 power. With both external solar production and home load sensors, battery
 discharge is not treated as EV surplus: the EV receives only direct solar left
 after the configured house load, plus optional battery charge power above the
-protected reserve. If the available
+protected reserve only when solar production already exceeds the house load. If
+the available
 power is below the minimum Type 2 current of 6A while solar balancing is
 enabled, the port is kept in solar mode at 6A instead of being paused. If the
 current limit was changed manually, the controller preserves that manual limit
