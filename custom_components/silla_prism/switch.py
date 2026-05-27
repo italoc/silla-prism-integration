@@ -46,6 +46,7 @@ MODE_SOLAR = "1"
 MODE_NORMAL = "2"
 MODE_PAUSED = "3"
 MODE_AUTOLIMIT = "7"
+AUTOLIMIT_RECOVERY_COOLDOWN = 300
 
 
 async def async_setup_entry(
@@ -134,6 +135,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._ramp_direction = "none"
         self._current_limit_reason = "waiting_data"
         self._charging_from_surplus = False
+        self._last_autolimit_recovery: datetime | None = None
         self._surplus_since: datetime | None = None
         self._residual_export_since: datetime | None = None
         self._start_delay_trigger: CALLBACK_TYPE | None = None
@@ -357,6 +359,29 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             self._reset_start_delay()
             self._reset_residual_export()
             if self._reported_mode == MODE_AUTOLIMIT:
+                if self._can_recover_from_autolimit():
+                    self._charging_from_surplus = True
+                    self._last_autolimit_recovery = datetime.now(timezone.utc)
+                    self._update_solar_balance_state(
+                        SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
+                        MIN_CHARGE_CURRENT,
+                        available_power,
+                        target_power,
+                        0,
+                        battery_power,
+                        battery_charge_power,
+                        battery_discharge_power,
+                        battery_power_to_exclude,
+                        battery_reserve_power,
+                        raw_target_current=MIN_CHARGE_CURRENT,
+                        target_current=MIN_CHARGE_CURRENT,
+                        current_limit_reason="autolimit_recovery_6a",
+                        decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
+                    )
+                    await self._async_publish_current(MIN_CHARGE_CURRENT)
+                    await self._async_publish_mode(MODE_SOLAR)
+                    return
+
                 self._charging_from_surplus = False
                 self._update_solar_balance_state(
                     SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
@@ -460,6 +485,22 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
     def _is_charging_from_surplus(self, min_power: float) -> bool:
         """Return True when Prism appears to be actively charging already."""
         return self._charging_from_surplus or self._ev_power >= min_power * 0.5
+
+    def _can_recover_from_autolimit(self) -> bool:
+        """Return True when autolimit can be probed without command loops."""
+        if self._grid_power is None:
+            return False
+
+        if self._grid_power > self._deadband_power:
+            return False
+
+        if self._last_autolimit_recovery is None:
+            return True
+
+        elapsed = (
+            datetime.now(timezone.utc) - self._last_autolimit_recovery
+        ).total_seconds()
+        return elapsed >= AUTOLIMIT_RECOVERY_COOLDOWN
 
     def _get_manual_current_override(self) -> int | None:
         """Return the reported current if it appears to be a manual override."""

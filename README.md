@@ -41,8 +41,9 @@ adds experimental solar and home-battery charging logic.
   controller keeps the EVSE in solar mode at 6A and raises current again when
   surplus returns. If the current limit was changed manually, that manual limit
   is preserved while low surplus remains. If Prism enters autolimit because of
-  house-load protection, the controller does not force it back to solar until
-  enough surplus is available again.
+  house-load protection, the controller waits until grid import is back inside
+  the configured deadband, then makes one 6A recovery attempt with a cooldown to
+  avoid command loops.
 - Diagnostic sensors for calculated surplus, target current, grid power,
   battery power used in the calculation and controller decision reason.
 
@@ -161,10 +162,12 @@ flowchart TD
     C --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
     D --> E{"Enough surplus<br/>for at least 6A?"}
 
-    E -->|No, autolimit active| F["Respect Prism autolimit<br/>wait for surplus to return"]
+    E -->|No, autolimit active| F{"Grid import<br/>inside deadband?"}
     E -->|No, no autolimit| G["Keep Prism in solar mode<br/>hold 6A unless current was changed manually"]
     E -->|Yes| H["Convert surplus to target current<br/>and clamp between 6A and max current"]
 
+    F -->|No| L["Respect Prism autolimit<br/>wait for load to drop"]
+    F -->|Yes, cooldown elapsed| G
     G --> K["Publish MQTT commands<br/>set_current_limit and solar mode"]
     H --> I["Stabilize current<br/>deadband avoids oscillation<br/>slow ramp-up and faster ramp-down"]
     I --> J["Recover unused export<br/>add current if export stays available"]
@@ -178,8 +181,10 @@ available power is below the minimum Type 2 current of 6A while solar balancing
 is enabled, the port is kept in solar mode at 6A instead of being paused. If the
 current limit was changed manually, the controller preserves that manual limit
 while low surplus remains. If Prism reports autolimit mode, the controller
-treats that as a wallbox protection state and waits instead of forcing solar
-mode at 6A.
+treats that as a wallbox protection state. It does not force solar mode while
+there is real grid import above the configured deadband. Once the load has
+dropped and grid import is back inside the deadband, it tries one recovery at
+6A, then waits 5 minutes before any further autolimit recovery attempt.
 If `Use battery charge as surplus` is enabled, battery charging power is counted
 too, but only for the part that exceeds the battery charge power currently
 reserved for the home battery. Without a SOC sensor, the fixed reserve is the
@@ -199,7 +204,8 @@ Before raising current above the minimum from a low-surplus hold, the surplus
 can be delayed by the configured ramp and stabilization settings. This helps
 avoid short clouds or transient loads repeatedly changing the car current. If
 surplus drops below the Type 2 minimum, the port is kept in solar mode at 6A
-instead of being paused, unless Prism reports autolimit.
+instead of being paused, unless Prism reports autolimit and grid import is still
+above the deadband.
 
 When enabled, the integration also exposes additional sensors for each port:
 
