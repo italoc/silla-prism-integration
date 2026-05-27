@@ -203,6 +203,12 @@
             "solar_balance_grid_power": {
                 "name": "Potenza rete usata nel calcolo"
             },
+            "solar_balance_solar_power": {
+                "name": "Produzione solare usata nel calcolo"
+            },
+            "solar_balance_home_load_power": {
+                "name": "Carico casa usato nel calcolo"
+            },
             "solar_balance_target_current": {
                 "name": "Corrente target calcolata"
             },

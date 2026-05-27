@@ -237,6 +237,8 @@ When enabled, the integration also exposes additional sensors for each port:
 | Calculated total surplus | Total power available to the balancing algorithm. |
 | Battery power used in calculation | Battery contribution used by the algorithm. Positive values reduce EV power, negative values increase available EV power. |
 | Grid power used in calculation | Latest Prism grid power value used by the algorithm. |
+| Solar production used in calculation | Latest Prism solar production value used by the algorithm. |
+| Home load used in calculation | Latest configured home load sensor value used by the algorithm. |
 | Calculated target current | Final current the algorithm wants to send to Prism after deadband, ramp and recovery limits. |
 | Raw target current | Current calculated directly from surplus before stabilisation. |
 | Battery reserve power | Home-battery charge power currently protected by the SOC logic. |

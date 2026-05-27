@@ -203,6 +203,12 @@
             "solar_balance_grid_power": {
                 "name": "Grid power used in calculation"
             },
+            "solar_balance_solar_power": {
+                "name": "Solar production used in calculation"
+            },
+            "solar_balance_home_load_power": {
+                "name": "Home load used in calculation"
+            },
             "solar_balance_target_current": {
                 "name": "Calculated target current"
             },

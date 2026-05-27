@@ -342,6 +342,10 @@ class PrismSolarBalanceSensor(SensorEntity):
             self._attr_native_value = state.battery_power_used
         elif self.entity_description.value_key == "grid_power":
             self._attr_native_value = state.grid_power
+        elif self.entity_description.value_key == "solar_power":
+            self._attr_native_value = state.solar_power
+        elif self.entity_description.value_key == "home_load_power":
+            self._attr_native_value = state.home_load_power
         elif self.entity_description.value_key == "target_current":
             self._attr_native_value = state.target_current
         elif self.entity_description.value_key == "raw_target_current":
@@ -453,6 +457,26 @@ SOLAR_BALANCE_SENSORS: tuple[PrismSolarBalanceSensorEntityDescription, ...] = (
         has_entity_name=True,
         translation_key="solar_balance_grid_power",
         value_key="grid_power",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_solar_power_{}",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        has_entity_name=True,
+        translation_key="solar_balance_solar_power",
+        value_key="solar_power",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_home_load_power_{}",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        has_entity_name=True,
+        translation_key="solar_balance_home_load_power",
+        value_key="home_load_power",
     ),
     PrismSolarBalanceSensorEntityDescription(
         key="solar_balance_target_current_{}",
