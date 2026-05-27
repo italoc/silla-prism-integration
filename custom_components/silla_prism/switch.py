@@ -89,6 +89,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._entry_data = entry_data
         self._base_topic = entry_data.topic
         self._battery_sensor = entry_data.battery_power_sensor
+        self._solar_production_sensor = entry_data.solar_production_power_sensor
         self._home_load_sensor = entry_data.home_load_power_sensor
         self._battery_soc_sensor = entry_data.battery_soc_sensor
         self._battery_discharge_positive = entry_data.battery_discharge_positive
@@ -180,11 +181,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 ),
                 await mqtt.async_subscribe(
                     self.hass,
-                    f"{self._base_topic}energy_data/power_solar",
-                    self._mqtt_solar_power_received,
-                ),
-                await mqtt.async_subscribe(
-                    self.hass,
                     f"{self._base_topic}{self._port}/w",
                     self._mqtt_ev_power_received,
                 ),
@@ -210,6 +206,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 self.hass, self._battery_sensor, self._battery_power_received
             )
         )
+        if self._solar_production_sensor:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass,
+                    self._solar_production_sensor,
+                    self._solar_production_power_received,
+                )
+            )
         if self._home_load_sensor:
             self.async_on_remove(
                 async_track_state_change_event(
@@ -225,6 +229,12 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
         if battery_state := self.hass.states.get(self._battery_sensor):
             self._battery_power = self._parse_state(battery_state.state)
+        if self._solar_production_sensor and (
+            solar_production_state := self.hass.states.get(
+                self._solar_production_sensor
+            )
+        ):
+            self._solar_power = self._parse_state(solar_production_state.state)
         if self._home_load_sensor and (
             home_load_state := self.hass.states.get(self._home_load_sensor)
         ):
@@ -269,11 +279,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
     @callback
     def _mqtt_grid_power_received(self, msg) -> None:
         self._grid_power = self._parse_state(msg.payload)
-        self.hass.async_create_task(self._async_update_balance())
-
-    @callback
-    def _mqtt_solar_power_received(self, msg) -> None:
-        self._solar_power = self._parse_state(msg.payload)
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
@@ -324,6 +329,17 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             self._home_load_power = None
         else:
             self._home_load_power = self._parse_state(new_state.state)
+        self.hass.async_create_task(self._async_update_balance())
+
+    @callback
+    def _solar_production_power_received(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        new_state = event.data["new_state"]
+        if new_state is None or new_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            self._solar_power = None
+        else:
+            self._solar_power = self._parse_state(new_state.state)
         self.hass.async_create_task(self._async_update_balance())
 
     def _parse_state(self, value: str) -> float | None:
@@ -529,7 +545,12 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self, battery_charge_available: float, battery_power_to_exclude: float
     ) -> tuple[float, str]:
         """Return EV surplus power and the source used to calculate it."""
-        if self._home_load_power is not None and self._solar_power is not None:
+        if (
+            self._solar_production_sensor
+            and self._home_load_sensor
+            and self._home_load_power is not None
+            and self._solar_power is not None
+        ):
             solar_production = abs(self._solar_power)
             home_load_power = max(self._home_load_power, 0)
             available_power = solar_production - home_load_power

@@ -19,6 +19,7 @@ class RuntimeEntryData:
     maxcurr: int
     solar_battery_balance: bool
     battery_power_sensor: str
+    solar_production_power_sensor: str
     home_load_power_sensor: str
     battery_soc_sensor: str
     battery_discharge_positive: bool

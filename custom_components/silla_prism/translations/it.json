@@ -10,7 +10,8 @@
         "error": {
             "linking": "Errore di collegamento sconosciuto",
             "register_failed": "Impossibile registrare, riprovare",
-            "battery_sensor_required": "Inserire un sensore potenza batteria per abilitare il bilanciamento solare"
+            "battery_sensor_required": "Inserire un sensore potenza batteria per abilitare il bilanciamento solare",
+            "solar_sensor_required": "Inserire un sensore produzione solare quando si usa un sensore carico casa"
         },
         "step": {
             "user": {
@@ -23,6 +24,7 @@
                     "maxcurr": "Corrente massima impostabile 6A-32A",
                     "solar_battery_balance": "Abilita bilanciamento solare con batteria",
                     "battery_power_sensor": "Sensore potenza batteria",
+                    "solar_production_power_sensor": "Sensore produzione solare",
                     "home_load_power_sensor": "Sensore carico casa",
                     "battery_soc_sensor": "Sensore SOC batteria casa (%)",
                     "battery_discharge_positive": "La batteria in scarica ha valore positivo",
@@ -51,7 +53,8 @@
                     "maxcurr": "Limite massimo che il bilanciamento puo' impostare sul Prism. Esempio: 16 per non superare 16A.",
                     "solar_battery_balance": "Crea lo switch che regola automaticamente la corrente in base a solare, rete e batteria casa.",
                     "battery_power_sensor": "Sensore Home Assistant della potenza batteria casa in W. Esempio: sensor.batteria_potenza.",
-                    "home_load_power_sensor": "Sensore Home Assistant del carico casa in W, preferibilmente esclusa la wallbox. Se configurato, il bilanciamento calcola il surplus EV dalla produzione solare Prism meno il carico casa.",
+                    "solar_production_power_sensor": "Sensore Home Assistant della produzione fotovoltaica reale in W. Usalo quando Prism energy_data/power_solar non e' valorizzato.",
+                    "home_load_power_sensor": "Sensore Home Assistant del carico casa in W, preferibilmente esclusa la wallbox. Se configurato insieme al sensore produzione solare, il bilanciamento calcola il surplus EV dalla produzione solare esterna meno il carico casa esterno.",
                     "battery_soc_sensor": "Sensore Home Assistant della percentuale batteria casa. Esempio: sensor.batteria_soc.",
                     "battery_discharge_positive": "Attiva se il sensore batteria e' positivo quando scarica e negativo quando carica. Disattiva se il tuo sensore usa il segno opposto.",
                     "battery_max_charge_power": "Potenza da riservare alla batteria quando il SOC e' basso. Nel tuo caso il valore tipico e' 2700 W.",

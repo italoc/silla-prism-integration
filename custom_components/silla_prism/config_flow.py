@@ -21,6 +21,7 @@ from .const import (
     CONF_BATTERY_POWER_SENSOR,
     CONF_BATTERY_SOC_SENSOR,
     CONF_HOME_LOAD_POWER_SENSOR,
+    CONF_SOLAR_PRODUCTION_POWER_SENSOR,
     CONF_MAX_CURRENT,
     CONF_PORTS,
     CONF_POWERWALL,
@@ -47,6 +48,7 @@ from .const import (
     DEFAULT_BATTERY_POWER_SENSOR,
     DEFAULT_BATTERY_SOC_SENSOR,
     DEFAULT_HOME_LOAD_POWER_SENSOR,
+    DEFAULT_SOLAR_PRODUCTION_POWER_SENSOR,
     DEFAULT_MAX_CURRENT,
     DEFAULT_PORTS,
     DEFAULT_POWERWALL,
@@ -90,6 +92,10 @@ SILLA_PRISM_SCHEMA = vol.Schema(
         ): cv.boolean,
         vol.Optional(
             CONF_BATTERY_POWER_SENSOR, default=DEFAULT_BATTERY_POWER_SENSOR
+        ): BATTERY_SENSOR_SELECTOR,
+        vol.Optional(
+            CONF_SOLAR_PRODUCTION_POWER_SENSOR,
+            default=DEFAULT_SOLAR_PRODUCTION_POWER_SENSOR,
         ): BATTERY_SENSOR_SELECTOR,
         vol.Optional(
             CONF_HOME_LOAD_POWER_SENSOR, default=DEFAULT_HOME_LOAD_POWER_SENSOR
@@ -165,7 +171,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a Silla Prism config flow."""
 
     VERSION = 1
-    MINOR_VERSION = 8
+    MINOR_VERSION = 9
 
     def __init__(self) -> None:
         """Initialize flow."""
@@ -177,6 +183,9 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         self._max_current: int = DEFAULT_MAX_CURRENT
         self._solar_battery_balance: bool = DEFAULT_SOLAR_BATTERY_BALANCE
         self._battery_power_sensor: str = DEFAULT_BATTERY_POWER_SENSOR
+        self._solar_production_power_sensor: str = (
+            DEFAULT_SOLAR_PRODUCTION_POWER_SENSOR
+        )
         self._home_load_power_sensor: str = DEFAULT_HOME_LOAD_POWER_SENSOR
         self._battery_discharge_positive: bool = DEFAULT_BATTERY_DISCHARGE_POSITIVE
         self._battery_max_charge_power: int = DEFAULT_BATTERY_MAX_CHARGE_POWER
@@ -270,6 +279,10 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         self._battery_power_sensor = user_input.get(
             CONF_BATTERY_POWER_SENSOR, DEFAULT_BATTERY_POWER_SENSOR
         ).strip()
+        self._solar_production_power_sensor = user_input.get(
+            CONF_SOLAR_PRODUCTION_POWER_SENSOR,
+            DEFAULT_SOLAR_PRODUCTION_POWER_SENSOR,
+        ).strip()
         self._home_load_power_sensor = user_input.get(
             CONF_HOME_LOAD_POWER_SENSOR, DEFAULT_HOME_LOAD_POWER_SENSOR
         ).strip()
@@ -345,6 +358,12 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if self._solar_battery_balance and self._battery_power_sensor == "":
             return await self._async_step_user_base(error="battery_sensor_required")
+        if (
+            self._solar_battery_balance
+            and self._home_load_power_sensor != ""
+            and self._solar_production_power_sensor == ""
+        ):
+            return await self._async_step_user_base(error="solar_sensor_required")
 
         return await self._async_try_fetch_device_info()
 
@@ -387,6 +406,13 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
                             default=entry.data.get(
                                 CONF_BATTERY_POWER_SENSOR,
                                 DEFAULT_BATTERY_POWER_SENSOR,
+                            ),
+                        ): BATTERY_SENSOR_SELECTOR,
+                        vol.Optional(
+                            CONF_SOLAR_PRODUCTION_POWER_SENSOR,
+                            default=entry.data.get(
+                                CONF_SOLAR_PRODUCTION_POWER_SENSOR,
+                                DEFAULT_SOLAR_PRODUCTION_POWER_SENSOR,
                             ),
                         ): BATTERY_SENSOR_SELECTOR,
                         vol.Optional(
@@ -566,6 +592,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_MAX_CURRENT: self._max_current,
             CONF_SOLAR_BATTERY_BALANCE: self._solar_battery_balance,
             CONF_BATTERY_POWER_SENSOR: self._battery_power_sensor,
+            CONF_SOLAR_PRODUCTION_POWER_SENSOR: self._solar_production_power_sensor,
             CONF_HOME_LOAD_POWER_SENSOR: self._home_load_power_sensor,
             CONF_BATTERY_SOC_SENSOR: self._battery_soc_sensor,
             CONF_BATTERY_DISCHARGE_POSITIVE: self._battery_discharge_positive,
@@ -616,6 +643,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_MAX_CURRENT: self._max_current,
             CONF_SOLAR_BATTERY_BALANCE: self._solar_battery_balance,
             CONF_BATTERY_POWER_SENSOR: self._battery_power_sensor,
+            CONF_SOLAR_PRODUCTION_POWER_SENSOR: self._solar_production_power_sensor,
             CONF_HOME_LOAD_POWER_SENSOR: self._home_load_power_sensor,
             CONF_BATTERY_SOC_SENSOR: self._battery_soc_sensor,
             CONF_BATTERY_DISCHARGE_POSITIVE: self._battery_discharge_positive,

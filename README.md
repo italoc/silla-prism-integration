@@ -88,12 +88,13 @@ Prerequisites: A working MQTT server.
 
    The first part contains the MQTT topic, the maximum current limit, the switch
    that enables solar battery balancing, and the Home Assistant sensors used for
-   home-battery power, optional house load and SOC. Select the battery power
-   sensor in W and, if available, a house load sensor in W and the SOC sensor in
-   %. The house load sensor should exclude the EV charger when possible; if your
-   meter includes the EV charger, create a template sensor that subtracts Prism
-   EV output power. Enable the battery sign option when your battery sensor is
-   positive while discharging and negative while charging.
+   home-battery power, real solar production, optional house load and SOC.
+   Select the battery power sensor in W and, when you want the direct
+   solar-minus-house calculation, select both a solar production sensor in W and
+   a house load sensor in W. The house load sensor should exclude the EV charger
+   when possible; if your meter includes the EV charger, create a template sensor
+   that subtracts Prism EV output power. Enable the battery sign option when your
+   battery sensor is positive while discharging and negative while charging.
 
    <img alt="Silla Prism configuration battery priority and charging phases" src="images/config-solar-battery-2-battery-priority.png" width="520">
 
@@ -133,7 +134,8 @@ Configure it from the integration setup/reconfigure form:
 | ------ | ----------- |
 | Enable solar battery balancing | Creates the balancing switch. |
 | Battery power sensor | Home Assistant entity that reports battery charge/discharge power in W. |
-| Home load power sensor | Optional Home Assistant entity that reports house load in W, preferably excluding the EV charger. When set, the controller uses Prism solar production minus this house load to calculate EV surplus. |
+| Solar production power sensor | Home Assistant entity that reports real PV production in W. Use this instead of Prism `energy_data/power_solar` when that topic is not populated. Required when the home load sensor is configured. |
+| Home load power sensor | Optional Home Assistant entity that reports house load in W, preferably excluding the EV charger. When set together with the solar production sensor, the controller uses external solar production minus external house load to calculate EV surplus. |
 | Home battery SOC sensor | Optional Home Assistant entity that reports the home battery state of charge in %. |
 | Battery discharge is a positive value | Enable this if the sensor is positive while the battery is discharging and negative while charging. Disable it if your sensor uses the opposite sign. |
 | Maximum battery charge power | Battery charge power, in W, reserved for the home battery while SOC is low. Default is `2700`. |
@@ -152,16 +154,19 @@ Configure it from the integration setup/reconfigure form:
 | Residual export for current recovery | Extra export that must remain available before adding current beyond the rounded calculation. Default is `400`. |
 | Residual export time before recovery | Seconds residual export must stay above threshold before recovery. Default is `60`. |
 
-Without a home load sensor, the controller estimates EV surplus from live Prism
-EV power, grid import/export and battery power:
+Without both external solar production and external home load sensors, the
+controller estimates EV surplus from live Prism EV power, grid import/export and
+battery power:
 
 ```text
 available_power = ev_power - grid_power - battery_power_to_exclude
 target_power = available_power - target_grid_export
 ```
 
-With a home load sensor and Prism solar production data, it uses the more direct
-house-load formula:
+With both external sensors configured, it uses the more direct house-load
+formula. Prism `energy_data/power_solar` and `energy_data/power_house` are not
+used for this direct calculation because on some installations they stay at
+`0`:
 
 ```text
 available_power = solar_production - home_load_power
@@ -172,9 +177,9 @@ target_power = available_power - target_grid_export
 
 ```mermaid
 flowchart TD
-    A["Read live data<br/>grid, EV power, voltage,<br/>solar production,<br/>home load, battery power and SOC"] --> B["Protect the home battery<br/>reserve more power at low SOC,<br/>reserve less at high SOC"]
+    A["Read live data<br/>grid, EV power, voltage,<br/>external solar production,<br/>external home load, battery power and SOC"] --> B["Protect the home battery<br/>reserve more power at low SOC,<br/>reserve less at high SOC"]
     B --> C{"Home load sensor<br/>and solar data available?"}
-    C -->|Yes| C1["Calculate direct EV surplus<br/>available_power = solar production - home load<br/>plus optional battery charge above reserve"]
+    C -->|Yes| C1["Calculate direct EV surplus<br/>available_power = external solar - external home load<br/>plus optional battery charge above reserve"]
     C -->|No| C2["Estimate EV surplus<br/>available_power = EV power - grid power<br/>minus battery power to exclude"]
     C1 --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
     C2 --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
@@ -194,9 +199,10 @@ flowchart TD
 
 With the default sign convention, battery discharge reduces the available EV
 power in the fallback estimator, while battery charge is not counted as available
-power. With a home load sensor, battery discharge is not treated as EV surplus:
-the EV receives only direct solar left after the configured house load, plus
-optional battery charge power above the protected reserve. If the available
+power. With both external solar production and home load sensors, battery
+discharge is not treated as EV surplus: the EV receives only direct solar left
+after the configured house load, plus optional battery charge power above the
+protected reserve. If the available
 power is below the minimum Type 2 current of 6A while solar balancing is
 enabled, the port is kept in solar mode at 6A instead of being paused. If the
 current limit was changed manually, the controller preserves that manual limit
@@ -237,7 +243,7 @@ When enabled, the integration also exposes additional sensors for each port:
 | Calculated total surplus | Total power available to the balancing algorithm. |
 | Battery power used in calculation | Battery contribution used by the algorithm. Positive values reduce EV power, negative values increase available EV power. |
 | Grid power used in calculation | Latest Prism grid power value used by the algorithm. |
-| Solar production used in calculation | Latest Prism solar production value used by the algorithm. |
+| Solar production used in calculation | Latest configured solar production sensor value used by the algorithm. |
 | Home load used in calculation | Latest configured home load sensor value used by the algorithm. |
 | Calculated target current | Final current the algorithm wants to send to Prism after deadband, ramp and recovery limits. |
 | Raw target current | Current calculated directly from surplus before stabilisation. |
