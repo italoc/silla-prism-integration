@@ -187,6 +187,7 @@
                     "waiting_data": "In attesa dei dati",
                     "waiting_stable_surplus": "In attesa di surplus stabile",
                     "paused_low_surplus": "In pausa per surplus basso",
+                    "external_paused": "In pausa dalla wallbox",
                     "charging_surplus": "Carica da surplus",
                     "low_surplus_keep_charging": "Surplus basso, carica mantenuta a 6A"
                 }
@@ -237,6 +238,7 @@
                     "waiting_data": "In attesa dei dati",
                     "waiting_stable_surplus": "In attesa di surplus stabile",
                     "paused_low_surplus": "In pausa per surplus basso",
+                    "external_paused": "In pausa dalla wallbox",
                     "charging_surplus": "Carica da surplus",
                     "low_surplus_keep_charging": "Surplus basso, carica mantenuta a 6A"
                 }

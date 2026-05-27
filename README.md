@@ -43,7 +43,9 @@ adds experimental solar and home-battery charging logic.
   is preserved while low surplus remains. If Prism enters autolimit because of
   house-load protection, the controller waits until grid import is back inside
   the configured deadband, then makes one 6A recovery attempt with a cooldown to
-  avoid command loops.
+  avoid command loops. If Prism reports paused mode, for example because a
+  charge limit was reached, the controller respects that pause and does not
+  force solar mode again.
 - Diagnostic sensors for calculated surplus, target current, grid power,
   battery power used in the calculation and controller decision reason.
 
@@ -212,6 +214,10 @@ treats that as a wallbox protection state. It does not force solar mode while
 there is real grid import above the configured deadband. Once the load has
 dropped and grid import is back inside the deadband, it tries one recovery at
 6A, then waits 5 minutes before any further autolimit recovery attempt.
+If Prism reports paused mode, the controller treats it as a deliberate wallbox
+pause, for example a charge limit reached in the wallbox/app, and does not
+resume charging automatically. Change the port mode back to solar/normal or
+toggle the balancing switch when you want the controller to take over again.
 If `Use battery charge as surplus` is enabled, battery charging power is counted
 too, but only for the part that exceeds the battery charge power currently
 reserved for the home battery. Without a SOC sensor, the fixed reserve is the
@@ -238,7 +244,7 @@ When enabled, the integration also exposes additional sensors for each port:
 
 | Entity | Description |
 | ------ | ----------- |
-| Solar balance status | Shows whether balancing is disabled, waiting for data, waiting for stable surplus, holding at 6A for low surplus or charging from surplus. |
+| Solar balance status | Shows whether balancing is disabled, waiting for data, paused by the wallbox, waiting for stable surplus, holding at 6A for low surplus or charging from surplus. |
 | Solar surplus current | Current in amps currently available from the calculated solar surplus. |
 | Stable surplus countdown | Seconds remaining before the integration starts charging automatically. |
 | Calculated total surplus | Total power available to the balancing algorithm. |

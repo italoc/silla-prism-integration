@@ -10,6 +10,7 @@ SOLAR_BALANCE_DISABLED = "disabled"
 SOLAR_BALANCE_WAITING_DATA = "waiting_data"
 SOLAR_BALANCE_WAITING_STABLE_SURPLUS = "waiting_stable_surplus"
 SOLAR_BALANCE_PAUSED_LOW_SURPLUS = "paused_low_surplus"
+SOLAR_BALANCE_EXTERNAL_PAUSED = "external_paused"
 SOLAR_BALANCE_CHARGING_SURPLUS = "charging_surplus"
 SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING = "low_surplus_keep_charging"
 

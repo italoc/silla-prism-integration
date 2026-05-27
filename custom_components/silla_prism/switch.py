@@ -30,6 +30,7 @@ from .entry_data import RuntimeEntryData
 from .solar_balance import (
     SOLAR_BALANCE_CHARGING_SURPLUS,
     SOLAR_BALANCE_DISABLED,
+    SOLAR_BALANCE_EXTERNAL_PAUSED,
     SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
     SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
@@ -130,7 +131,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._last_current_increase: datetime | None = None
         self._last_mode_command: str | None = None
         self._reported_mode: str | None = None
-        self._raw_target_current: int | None = None
+        self._raw_target_current: float | None = None
         self._unused_export_power: float = 0
         self._excess_import_power: float = 0
         self._residual_export_remaining: int = 0
@@ -379,6 +380,25 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 None,
                 None,
                 decision_reason="waiting_data",
+            )
+            return
+
+        if self._reported_mode == MODE_PAUSED:
+            self._reset_start_delay()
+            self._reset_residual_export()
+            self._charging_from_surplus = False
+            self._update_solar_balance_state(
+                SOLAR_BALANCE_EXTERNAL_PAUSED,
+                0,
+                None,
+                None,
+                None,
+                battery_power=self._battery_power,
+                surplus_source="external_pause",
+                raw_target_current=0,
+                target_current=0,
+                current_limit_reason="external_pause",
+                decision_reason=SOLAR_BALANCE_EXTERNAL_PAUSED,
             )
             return
 
