@@ -89,6 +89,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._entry_data = entry_data
         self._base_topic = entry_data.topic
         self._battery_sensor = entry_data.battery_power_sensor
+        self._home_load_sensor = entry_data.home_load_power_sensor
         self._battery_soc_sensor = entry_data.battery_soc_sensor
         self._battery_discharge_positive = entry_data.battery_discharge_positive
         self._battery_max_charge_power = entry_data.battery_max_charge_power
@@ -118,6 +119,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
         self._grid_power: float | None = None
         self._ev_power: float | None = None
+        self._solar_power: float | None = None
+        self._home_load_power: float | None = None
         self._grid_voltage: float | None = None
         self._battery_power: float | None = None
         self._battery_soc: float | None = None
@@ -177,6 +180,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 ),
                 await mqtt.async_subscribe(
                     self.hass,
+                    f"{self._base_topic}energy_data/power_solar",
+                    self._mqtt_solar_power_received,
+                ),
+                await mqtt.async_subscribe(
+                    self.hass,
                     f"{self._base_topic}{self._port}/w",
                     self._mqtt_ev_power_received,
                 ),
@@ -202,6 +210,12 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 self.hass, self._battery_sensor, self._battery_power_received
             )
         )
+        if self._home_load_sensor:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, self._home_load_sensor, self._home_load_power_received
+                )
+            )
         if self._battery_soc_sensor:
             self.async_on_remove(
                 async_track_state_change_event(
@@ -211,6 +225,10 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
         if battery_state := self.hass.states.get(self._battery_sensor):
             self._battery_power = self._parse_state(battery_state.state)
+        if self._home_load_sensor and (
+            home_load_state := self.hass.states.get(self._home_load_sensor)
+        ):
+            self._home_load_power = self._parse_state(home_load_state.state)
         if self._battery_soc_sensor and (
             battery_soc_state := self.hass.states.get(self._battery_soc_sensor)
         ):
@@ -254,6 +272,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
+    def _mqtt_solar_power_received(self, msg) -> None:
+        self._solar_power = self._parse_state(msg.payload)
+        self.hass.async_create_task(self._async_update_balance())
+
+    @callback
     def _battery_soc_received(self, event: Event[EventStateChangedData]) -> None:
         new_state = event.data["new_state"]
         if new_state is None or new_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
@@ -292,6 +315,15 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             self._battery_power = None
         else:
             self._battery_power = self._parse_state(new_state.state)
+        self.hass.async_create_task(self._async_update_balance())
+
+    @callback
+    def _home_load_power_received(self, event: Event[EventStateChangedData]) -> None:
+        new_state = event.data["new_state"]
+        if new_state is None or new_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            self._home_load_power = None
+        else:
+            self._home_load_power = self._parse_state(new_state.state)
         self.hass.async_create_task(self._async_update_balance())
 
     def _parse_state(self, value: str) -> float | None:
@@ -348,7 +380,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         battery_power_to_exclude = battery_discharge_power - (
             battery_charge_available if self._use_battery_charge else 0
         )
-        available_power = self._ev_power - self._grid_power - battery_power_to_exclude
+        available_power, surplus_source = self._get_available_power(
+            battery_charge_available, battery_power_to_exclude
+        )
         target_power = available_power - self._target_export_power
         min_power = MIN_CHARGE_CURRENT * voltage * self._phases
         watts_per_amp = voltage * self._phases
@@ -373,6 +407,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                         battery_discharge_power,
                         battery_power_to_exclude,
                         battery_reserve_power,
+                        surplus_source=surplus_source,
                         raw_target_current=MIN_CHARGE_CURRENT,
                         target_current=MIN_CHARGE_CURRENT,
                         current_limit_reason="autolimit_recovery_6a",
@@ -394,6 +429,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     battery_discharge_power,
                     battery_power_to_exclude,
                     battery_reserve_power,
+                    surplus_source=surplus_source,
                     raw_target_current=0,
                     target_current=0,
                     current_limit_reason="autolimit_low_surplus",
@@ -420,6 +456,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
+                surplus_source=surplus_source,
                 raw_target_current=MIN_CHARGE_CURRENT,
                 target_current=target_current,
                 current_limit_reason=current_limit_reason,
@@ -452,6 +489,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
+                surplus_source=surplus_source,
                 raw_target_current=self._raw_target_current,
                 target_current=preview_current,
                 current_limit_reason="waiting_stable_surplus",
@@ -473,6 +511,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             battery_discharge_power,
             battery_power_to_exclude,
             battery_reserve_power,
+            surplus_source=surplus_source,
             raw_target_current=self._raw_target_current,
             target_current=target_current,
             current_limit_reason=self._current_limit_reason,
@@ -485,6 +524,23 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
     def _is_charging_from_surplus(self, min_power: float) -> bool:
         """Return True when Prism appears to be actively charging already."""
         return self._charging_from_surplus or self._ev_power >= min_power * 0.5
+
+    def _get_available_power(
+        self, battery_charge_available: float, battery_power_to_exclude: float
+    ) -> tuple[float, str]:
+        """Return EV surplus power and the source used to calculate it."""
+        if self._home_load_power is not None and self._solar_power is not None:
+            solar_production = abs(self._solar_power)
+            home_load_power = max(self._home_load_power, 0)
+            available_power = solar_production - home_load_power
+            if self._use_battery_charge:
+                available_power += battery_charge_available
+            return available_power, "solar_home_load"
+
+        available_power = (
+            self._ev_power - self._grid_power - battery_power_to_exclude
+        )
+        return available_power, "prism_grid_battery"
 
     def _can_recover_from_autolimit(self) -> bool:
         """Return True when autolimit can be probed without command loops."""
@@ -709,6 +765,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         battery_discharge_power: float | None = None,
         battery_power_used: float | None = None,
         battery_reserve_power: float | None = None,
+        surplus_source: str | None = None,
         raw_target_current: float | None = None,
         target_current: float | None = None,
         current_limit_reason: str | None = None,
@@ -722,6 +779,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             start_delay_remaining=start_delay_remaining,
             grid_power=self._grid_power,
             ev_power=self._ev_power,
+            solar_power=self._solar_power,
+            home_load_power=self._home_load_power,
             battery_power=battery_power,
             battery_charge_power=battery_charge_power,
             battery_discharge_power=battery_discharge_power,
@@ -729,6 +788,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             battery_max_charge_power=self._battery_max_charge_power,
             battery_soc=self._battery_soc,
             battery_reserve_power=battery_reserve_power,
+            surplus_source=surplus_source,
             target_export_power=self._target_export_power,
             deadband_power=self._deadband_power,
             raw_target_current=raw_target_current,

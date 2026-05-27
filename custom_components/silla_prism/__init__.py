@@ -16,6 +16,7 @@ from .const import (
     CONF_BATTERY_MAX_CHARGE_POWER,
     CONF_BATTERY_POWER_SENSOR,
     CONF_BATTERY_SOC_SENSOR,
+    CONF_HOME_LOAD_POWER_SENSOR,
     CONF_PORTS,
     CONF_POWERWALL,
     CONF_SERIAL,
@@ -40,6 +41,7 @@ from .const import (
     DEFAULT_BATTERY_MAX_CHARGE_POWER,
     DEFAULT_BATTERY_POWER_SENSOR,
     DEFAULT_BATTERY_SOC_SENSOR,
+    DEFAULT_HOME_LOAD_POWER_SENSOR,
     DEFAULT_MAX_CURRENT,
     DEFAULT_PORTS,
     DEFAULT_POWERWALL,
@@ -106,6 +108,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     _battery_power_sensor = entry.data.get(
         CONF_BATTERY_POWER_SENSOR, DEFAULT_BATTERY_POWER_SENSOR
+    )
+    _home_load_power_sensor = entry.data.get(
+        CONF_HOME_LOAD_POWER_SENSOR, DEFAULT_HOME_LOAD_POWER_SENSOR
     )
     _battery_soc_sensor = entry.data.get(
         CONF_BATTERY_SOC_SENSOR, DEFAULT_BATTERY_SOC_SENSOR
@@ -203,6 +208,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         maxcurr=_maxcurr,
         solar_battery_balance=_solar_battery_balance,
         battery_power_sensor=_battery_power_sensor,
+        home_load_power_sensor=_home_load_power_sensor,
         battery_soc_sensor=_battery_soc_sensor,
         battery_discharge_positive=_battery_discharge_positive,
         battery_max_charge_power=_battery_max_charge_power,

@@ -25,6 +25,8 @@ class SolarBalanceState:
     start_delay_remaining: int | None = None
     grid_power: float | None = None
     ev_power: float | None = None
+    solar_power: float | None = None
+    home_load_power: float | None = None
     battery_power: float | None = None
     battery_charge_power: float | None = None
     battery_discharge_power: float | None = None
@@ -32,6 +34,7 @@ class SolarBalanceState:
     battery_max_charge_power: float | None = None
     battery_soc: float | None = None
     battery_reserve_power: float | None = None
+    surplus_source: str | None = None
     target_export_power: float | None = None
     deadband_power: float | None = None
     raw_target_current: float | None = None
