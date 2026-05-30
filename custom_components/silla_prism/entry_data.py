@@ -21,6 +21,7 @@ class RuntimeEntryData:
     battery_power_sensor: str
     solar_production_power_sensor: str
     home_load_power_sensor: str
+    home_load_includes_ev: bool
     battery_soc_sensor: str
     battery_discharge_positive: bool
     battery_max_charge_power: int

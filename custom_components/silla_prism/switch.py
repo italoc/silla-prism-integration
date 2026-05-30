@@ -93,6 +93,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._battery_sensor = entry_data.battery_power_sensor
         self._solar_production_sensor = entry_data.solar_production_power_sensor
         self._home_load_sensor = entry_data.home_load_power_sensor
+        self._home_load_includes_ev = entry_data.home_load_includes_ev
         self._battery_soc_sensor = entry_data.battery_soc_sensor
         self._battery_discharge_positive = entry_data.battery_discharge_positive
         self._battery_max_charge_power = entry_data.battery_max_charge_power
@@ -124,6 +125,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._ev_power: float | None = None
         self._solar_power: float | None = None
         self._home_load_power: float | None = None
+        self._effective_home_load_power: float | None = None
         self._grid_voltage: float | None = None
         self._battery_power: float | None = None
         self._battery_soc: float | None = None
@@ -601,11 +603,15 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         ):
             solar_production = abs(self._solar_power)
             home_load_power = max(self._home_load_power, 0)
+            if self._home_load_includes_ev:
+                home_load_power = max(home_load_power - self._ev_power, 0)
+            self._effective_home_load_power = home_load_power
             available_power = solar_production - home_load_power
             if self._use_battery_charge and available_power > 0:
                 available_power += battery_charge_available
             return available_power, "solar_home_load"
 
+        self._effective_home_load_power = None
         available_power = (
             self._ev_power - self._grid_power - battery_power_to_exclude
         )
@@ -906,7 +912,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             grid_power=self._grid_power,
             ev_power=self._ev_power,
             solar_power=self._solar_power,
-            home_load_power=self._home_load_power,
+            home_load_power=(
+                self._effective_home_load_power
+                if self._effective_home_load_power is not None
+                else self._home_load_power
+            ),
             battery_power=battery_power,
             battery_charge_power=battery_charge_power,
             battery_discharge_power=battery_discharge_power,

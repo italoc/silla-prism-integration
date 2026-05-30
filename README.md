@@ -137,7 +137,8 @@ Configure it from the integration setup/reconfigure form:
 | Enable solar battery balancing | Creates the balancing switch. |
 | Battery power sensor | Home Assistant entity that reports battery charge/discharge power in W. |
 | Solar production power sensor | Home Assistant entity that reports real PV production in W. Use this instead of Prism `energy_data/power_solar` when that topic is not populated. Required when the home load sensor is configured. |
-| Home load power sensor | Optional Home Assistant entity that reports house load in W, preferably excluding the EV charger. When set together with the solar production sensor, the controller uses external solar production minus external house load to calculate EV surplus. |
+| Home load power sensor | Optional Home Assistant entity that reports house load in W. When set together with the solar production sensor, the controller uses external solar production minus external house load to calculate EV surplus. |
+| Home load sensor includes EV charger | Enable this when the home load sensor is a total-load sensor that also includes EV charging. The controller subtracts live Prism EV output power before calculating surplus. |
 | Home battery SOC sensor | Optional Home Assistant entity that reports the home battery state of charge in %. |
 | Battery discharge is a positive value | Enable this if the sensor is positive while the battery is discharging and negative while charging. Disable it if your sensor uses the opposite sign. |
 | Maximum battery charge power | Battery charge power, in W, reserved for the home battery while SOC is low. Default is `2700`. |
@@ -172,6 +173,8 @@ used for this direct calculation because on some installations they stay at
 
 ```text
 available_power = solar_production - home_load_power
+if home_load_includes_ev:
+    available_power += ev_power
 if use_battery_charge:
     available_power += battery_charge_available_above_reserve only when solar_production > home_load_power
 target_power = available_power - target_grid_export
@@ -203,8 +206,11 @@ With the default sign convention, battery discharge reduces the available EV
 power in the fallback estimator, while battery charge is not counted as available
 power. With both external solar production and home load sensors, battery
 discharge is not treated as EV surplus: the EV receives only direct solar left
-after the configured house load, plus optional battery charge power above the
-protected reserve only when solar production already exceeds the house load. If
+after the configured house load. If the configured house load sensor includes
+the EV charger, the controller subtracts live Prism EV output power first so the
+car does not count against the house load. Optional battery charge power above
+the protected reserve is added only when solar production already exceeds the
+corrected house load. If
 the available
 power is below the minimum Type 2 current of 6A while solar balancing is
 enabled, the port is kept in solar mode at 6A instead of being paused. If the
@@ -258,7 +264,7 @@ When enabled, the integration also exposes additional sensors for each port:
 | Battery power used in calculation | Battery contribution used by the algorithm. Positive values reduce EV power, negative values increase available EV power. |
 | Grid power used in calculation | Latest Prism grid power value used by the algorithm. |
 | Solar production used in calculation | Latest configured solar production sensor value used by the algorithm. |
-| Home load used in calculation | Latest configured home load sensor value used by the algorithm. |
+| Home load used in calculation | Latest home load value used by the algorithm; if the EV-included option is enabled, this is the corrected value after subtracting Prism EV output power. |
 | Calculated target current | Final current the algorithm wants to send to Prism after deadband, ramp and recovery limits. |
 | Raw target current | Current calculated directly from surplus before stabilisation. |
 | Battery reserve power | Home-battery charge power currently protected by the SOC logic. |

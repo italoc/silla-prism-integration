@@ -21,6 +21,7 @@ from .const import (
     CONF_BATTERY_POWER_SENSOR,
     CONF_BATTERY_SOC_SENSOR,
     CONF_HOME_LOAD_POWER_SENSOR,
+    CONF_HOME_LOAD_INCLUDES_EV,
     CONF_SOLAR_PRODUCTION_POWER_SENSOR,
     CONF_MAX_CURRENT,
     CONF_PORTS,
@@ -48,6 +49,7 @@ from .const import (
     DEFAULT_BATTERY_POWER_SENSOR,
     DEFAULT_BATTERY_SOC_SENSOR,
     DEFAULT_HOME_LOAD_POWER_SENSOR,
+    DEFAULT_HOME_LOAD_INCLUDES_EV,
     DEFAULT_SOLAR_PRODUCTION_POWER_SENSOR,
     DEFAULT_MAX_CURRENT,
     DEFAULT_PORTS,
@@ -100,6 +102,9 @@ SILLA_PRISM_SCHEMA = vol.Schema(
         vol.Optional(
             CONF_HOME_LOAD_POWER_SENSOR, default=DEFAULT_HOME_LOAD_POWER_SENSOR
         ): BATTERY_SENSOR_SELECTOR,
+        vol.Optional(
+            CONF_HOME_LOAD_INCLUDES_EV, default=DEFAULT_HOME_LOAD_INCLUDES_EV
+        ): cv.boolean,
         vol.Optional(
             CONF_BATTERY_SOC_SENSOR, default=DEFAULT_BATTERY_SOC_SENSOR
         ): BATTERY_SENSOR_SELECTOR,
@@ -171,7 +176,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a Silla Prism config flow."""
 
     VERSION = 1
-    MINOR_VERSION = 9
+    MINOR_VERSION = 10
 
     def __init__(self) -> None:
         """Initialize flow."""
@@ -187,6 +192,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             DEFAULT_SOLAR_PRODUCTION_POWER_SENSOR
         )
         self._home_load_power_sensor: str = DEFAULT_HOME_LOAD_POWER_SENSOR
+        self._home_load_includes_ev: bool = DEFAULT_HOME_LOAD_INCLUDES_EV
         self._battery_discharge_positive: bool = DEFAULT_BATTERY_DISCHARGE_POSITIVE
         self._battery_max_charge_power: int = DEFAULT_BATTERY_MAX_CHARGE_POWER
         self._solar_balance_phases: int = DEFAULT_SOLAR_BALANCE_PHASES
@@ -286,6 +292,9 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         self._home_load_power_sensor = user_input.get(
             CONF_HOME_LOAD_POWER_SENSOR, DEFAULT_HOME_LOAD_POWER_SENSOR
         ).strip()
+        self._home_load_includes_ev = user_input.get(
+            CONF_HOME_LOAD_INCLUDES_EV, DEFAULT_HOME_LOAD_INCLUDES_EV
+        )
         self._battery_soc_sensor = user_input.get(
             CONF_BATTERY_SOC_SENSOR, DEFAULT_BATTERY_SOC_SENSOR
         ).strip()
@@ -422,6 +431,13 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
                                 DEFAULT_HOME_LOAD_POWER_SENSOR,
                             ),
                         ): BATTERY_SENSOR_SELECTOR,
+                        vol.Optional(
+                            CONF_HOME_LOAD_INCLUDES_EV,
+                            default=entry.data.get(
+                                CONF_HOME_LOAD_INCLUDES_EV,
+                                DEFAULT_HOME_LOAD_INCLUDES_EV,
+                            ),
+                        ): cv.boolean,
                         vol.Optional(
                             CONF_BATTERY_SOC_SENSOR,
                             default=entry.data.get(
@@ -594,6 +610,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_BATTERY_POWER_SENSOR: self._battery_power_sensor,
             CONF_SOLAR_PRODUCTION_POWER_SENSOR: self._solar_production_power_sensor,
             CONF_HOME_LOAD_POWER_SENSOR: self._home_load_power_sensor,
+            CONF_HOME_LOAD_INCLUDES_EV: self._home_load_includes_ev,
             CONF_BATTERY_SOC_SENSOR: self._battery_soc_sensor,
             CONF_BATTERY_DISCHARGE_POSITIVE: self._battery_discharge_positive,
             CONF_BATTERY_MAX_CHARGE_POWER: self._battery_max_charge_power,
@@ -645,6 +662,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_BATTERY_POWER_SENSOR: self._battery_power_sensor,
             CONF_SOLAR_PRODUCTION_POWER_SENSOR: self._solar_production_power_sensor,
             CONF_HOME_LOAD_POWER_SENSOR: self._home_load_power_sensor,
+            CONF_HOME_LOAD_INCLUDES_EV: self._home_load_includes_ev,
             CONF_BATTERY_SOC_SENSOR: self._battery_soc_sensor,
             CONF_BATTERY_DISCHARGE_POSITIVE: self._battery_discharge_positive,
             CONF_BATTERY_MAX_CHARGE_POWER: self._battery_max_charge_power,
