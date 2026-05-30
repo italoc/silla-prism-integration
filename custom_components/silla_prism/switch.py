@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timezone
-from math import floor
+from math import ceil, floor
 import logging
 
 from homeassistant.components import mqtt
@@ -520,7 +520,10 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         target_current = max(MIN_CHARGE_CURRENT, min(target_current, self._max_current))
         self._raw_target_current = target_current
         target_current = self._apply_current_optimizations(
-            target_current, watts_per_amp
+            target_current,
+            watts_per_amp,
+            battery_charge_power,
+            battery_reserve_power,
         )
         delay_remaining = self._get_start_delay_remaining()
         if delay_remaining > 0 and not already_charging:
@@ -636,7 +639,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return self._battery_max_charge_power
 
     def _apply_current_optimizations(
-        self, target_current: int, watts_per_amp: float
+        self,
+        target_current: int,
+        watts_per_amp: float,
+        battery_charge_power: float,
+        battery_reserve_power: float,
     ) -> int:
         """Apply hysteresis, proportional correction and ramp limits."""
         last_current = self._last_current_command
@@ -647,7 +654,17 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             return target_current
 
         self._track_grid_error()
-        if self._deadband_active:
+        battery_charge_target_current = self._get_battery_charge_target_current(
+            target_current,
+            last_current,
+            watts_per_amp,
+            battery_charge_power,
+            battery_reserve_power,
+        )
+        battery_charge_target_active = battery_charge_target_current > target_current
+        target_current = battery_charge_target_current
+
+        if self._deadband_active and not battery_charge_target_active:
             self._reset_residual_export()
             self._current_limit_reason = "deadband_hold"
             return last_current
@@ -669,6 +686,32 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             )
             return limited_current
         self._current_limit_reason = "target_current"
+        return target_current
+
+    def _get_battery_charge_target_current(
+        self,
+        target_current: int,
+        last_current: int,
+        watts_per_amp: float,
+        battery_charge_power: float,
+        battery_reserve_power: float,
+    ) -> int:
+        """Raise current toward the configured maximum battery charge target."""
+        if not self._use_battery_charge or watts_per_amp <= 0:
+            return target_current
+
+        battery_charge_excess = battery_charge_power - battery_reserve_power
+        if battery_charge_excess <= self._deadband_power:
+            return target_current
+
+        extra_current = ceil(battery_charge_excess / watts_per_amp)
+        battery_target_current = min(
+            self._max_current,
+            last_current + max(extra_current, 1),
+        )
+        if battery_target_current > target_current:
+            self._current_limit_reason = "battery_charge_target"
+            return battery_target_current
         return target_current
 
     def _apply_residual_export_recovery(self, target_current: int) -> int:

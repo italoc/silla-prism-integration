@@ -146,8 +146,8 @@ Configure it from the integration setup/reconfigure form:
 | Use battery charge as surplus | When enabled, battery charging power is also treated as available EV surplus. This gives the car priority over storing that solar energy first. |
 | Medium home battery SOC | SOC threshold where the reserved battery charge power drops to the medium reserve. Default is `40`. |
 | High home battery SOC | SOC threshold where the reserved battery charge power drops to the high reserve. Default is `80`. |
-| Medium SOC battery reserve | Battery charge power, in W, reserved before sending the rest to the EV at medium SOC. Default is `1500`. |
-| High SOC battery reserve | Battery charge power, in W, reserved before sending the rest to the EV at high SOC. Default is `1000`. |
+| Medium SOC battery reserve | Approximate maximum battery charge power, in W, kept for the home battery at medium SOC before sending the rest to the EV. Default is `1500`. |
+| High SOC battery reserve | Approximate maximum battery charge power, in W, kept for the home battery at high SOC before sending the rest to the EV. Default is `1000`. |
 | Target grid export | Watts to intentionally keep exported as a safety buffer. Default is `150`. |
 | Import/export deadband | Watts around the target export where current is left unchanged. Default is `150`. |
 | Minimum current increase interval | Minimum seconds between upward current steps. Default is `15`. |
@@ -221,10 +221,14 @@ solar/normal or toggle the balancing switch when you want the controller to take
 over again.
 If `Use battery charge as surplus` is enabled, battery charging power is counted
 too, but only for the part that exceeds the battery charge power currently
-reserved for the home battery. Without a SOC sensor, the fixed reserve is the
-configured maximum battery charge power. With a SOC sensor, the reserve is
-dynamic: low SOC reserves the configured maximum charge power, medium SOC
-reserves the medium value, high SOC reserves the high value, and SOC >= 95%
+reserved for the home battery. The controller also uses live battery charge
+power as feedback: if the battery is still charging above the configured reserve
+and grid import is not excessive, it can raise EV current gradually to bring
+battery charging back toward that maximum. Because the EV current changes in 1A
+steps, the battery target is approximate. Without a SOC sensor, the fixed
+reserve is the configured maximum battery charge power. With a SOC sensor, the
+reserve is dynamic: low SOC reserves the configured maximum charge power, medium
+SOC reserves the medium value, high SOC reserves the high value, and SOC >= 95%
 reserves `0 W` so the EV gets priority. This lets the car use direct solar
 energy while still protecting the home battery when it is low. The EV current
 follows the calculated surplus, clamped between the Type 2 minimum of 6A and the
