@@ -439,9 +439,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
         if target_power < min_power:
             self._reset_start_delay()
-            self._reset_residual_export()
             surplus_current = max(target_power / watts_per_amp, 0)
             if self._reported_mode == MODE_AUTOLIMIT:
+                self._reset_residual_export()
                 if self._can_recover_from_autolimit():
                     self._charging_from_surplus = True
                     self._last_autolimit_recovery = datetime.now(timezone.utc)
@@ -488,11 +488,23 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
             self._charging_from_surplus = True
             manual_current = self._get_manual_current_override()
-            target_current = manual_current or MIN_CHARGE_CURRENT
-            current_limit_reason = (
-                "manual_current_override"
-                if manual_current is not None
-                else "low_surplus_hold_6a"
+            if manual_current is not None:
+                target_current = manual_current
+                current_limit_reason = "manual_current_override"
+            else:
+                target_current = self._get_low_surplus_target_current(
+                    watts_per_amp
+                )
+                current_limit_reason = self._current_limit_reason
+            if target_current == MIN_CHARGE_CURRENT:
+                current_limit_reason = (
+                    "low_surplus_hold_6a"
+                    if current_limit_reason == "target_current"
+                    else current_limit_reason
+                )
+            self._raw_target_current = max(
+                surplus_current,
+                target_current if target_current > MIN_CHARGE_CURRENT else 0,
             )
             self._update_solar_balance_state(
                 SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
@@ -506,13 +518,13 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_power_to_exclude,
                 battery_reserve_power,
                 surplus_source=surplus_source,
-                raw_target_current=surplus_current,
+                raw_target_current=self._raw_target_current,
                 target_current=target_current,
                 current_limit_reason=current_limit_reason,
                 decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
             )
             if manual_current is None:
-                await self._async_publish_current(MIN_CHARGE_CURRENT)
+                await self._async_publish_current(target_current)
             await self._async_publish_mode(MODE_SOLAR)
             return
 
@@ -686,6 +698,23 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             )
             return limited_current
         self._current_limit_reason = "target_current"
+        return target_current
+
+    def _get_low_surplus_target_current(self, watts_per_amp: float) -> int:
+        """Recover current from persistent export while held at the 6A minimum."""
+        last_current = self._last_current_command or MIN_CHARGE_CURRENT
+        self._track_grid_error()
+        if not self._track_residual_export():
+            self._current_limit_reason = "target_current"
+            return MIN_CHARGE_CURRENT
+
+        step = self._get_proportional_increase_step(watts_per_amp)
+        target_current = min(
+            self._max_current,
+            max(MIN_CHARGE_CURRENT, last_current) + step,
+        )
+        self._reset_residual_export()
+        self._current_limit_reason = "residual_export_recovery"
         return target_current
 
     def _get_battery_charge_target_current(

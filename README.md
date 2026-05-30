@@ -237,7 +237,9 @@ The controller then applies a target export, a deadband, ramp limits and
 residual export recovery. By default it tries to keep about `150 W` exported,
 ignores changes within `150 W`, increases by at most `1A` every `15` seconds,
 decreases by up to `3A` immediately, and adds `1A` if more than `400 W` remains
-exported for `60` seconds.
+exported for `60` seconds. Residual export recovery is also active while the
+port is held at the 6A minimum, so persistent export can raise the EV current
+instead of being sold to the grid.
 Before raising current above the minimum from a low-surplus hold, the surplus
 can be delayed by the configured ramp and stabilization settings. This helps
 avoid short clouds or transient loads repeatedly changing the car current. If
