@@ -43,7 +43,7 @@ adds experimental solar and home-battery charging logic.
   is preserved while low surplus remains. If Prism enters autolimit because of
   house-load protection, the controller waits until grid import is back inside
   the configured deadband, then makes one 6A recovery attempt with a cooldown to
-  avoid command loops. If Prism reports paused mode, for example because a
+  avoid command loops. If Prism reports paused mode/state, for example because a
   charge limit was reached, the controller respects that pause and does not
   force solar mode again.
 - Diagnostic sensors for calculated surplus, target current, grid power,
@@ -214,10 +214,11 @@ treats that as a wallbox protection state. It does not force solar mode while
 there is real grid import above the configured deadband. Once the load has
 dropped and grid import is back inside the deadband, it tries one recovery at
 6A, then waits 5 minutes before any further autolimit recovery attempt.
-If Prism reports paused mode, the controller treats it as a deliberate wallbox
-pause, for example a charge limit reached in the wallbox/app, and does not
-resume charging automatically. Change the port mode back to solar/normal or
-toggle the balancing switch when you want the controller to take over again.
+If Prism reports paused mode or pause state, the controller treats it as a
+deliberate wallbox pause, for example a charge limit reached in the wallbox/app,
+and does not resume charging automatically. Change the port mode back to
+solar/normal or toggle the balancing switch when you want the controller to take
+over again.
 If `Use battery charge as surplus` is enabled, battery charging power is counted
 too, but only for the part that exceeds the battery charge power currently
 reserved for the home battery. Without a SOC sensor, the fixed reserve is the

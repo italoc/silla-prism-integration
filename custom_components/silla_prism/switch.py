@@ -47,6 +47,7 @@ MODE_SOLAR = "1"
 MODE_NORMAL = "2"
 MODE_PAUSED = "3"
 MODE_AUTOLIMIT = "7"
+STATE_PAUSE = "4"
 AUTOLIMIT_RECOVERY_COOLDOWN = 300
 
 
@@ -131,6 +132,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._last_current_increase: datetime | None = None
         self._last_mode_command: str | None = None
         self._reported_mode: str | None = None
+        self._reported_state: str | None = None
         self._raw_target_current: float | None = None
         self._unused_export_power: float = 0
         self._excess_import_power: float = 0
@@ -199,6 +201,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     self.hass,
                     f"{self._base_topic}{self._port}/mode",
                     self._mqtt_mode_received,
+                ),
+                await mqtt.async_subscribe(
+                    self.hass,
+                    f"{self._base_topic}{self._port}/state",
+                    self._mqtt_state_received,
                 ),
             ]
         )
@@ -315,6 +322,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
+    def _mqtt_state_received(self, msg) -> None:
+        self._reported_state = str(msg.payload).strip()
+        self.hass.async_create_task(self._async_update_balance())
+
+    @callback
     def _battery_power_received(self, event: Event[EventStateChangedData]) -> None:
         new_state = event.data["new_state"]
         if new_state is None or new_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
@@ -369,21 +381,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             )
             return
 
-        if not self._has_required_values:
-            self._reset_start_delay()
-            self._reset_residual_export()
-            self._charging_from_surplus = False
-            self._update_solar_balance_state(
-                SOLAR_BALANCE_WAITING_DATA,
-                None,
-                None,
-                None,
-                None,
-                decision_reason="waiting_data",
-            )
-            return
-
-        if self._reported_mode == MODE_PAUSED:
+        if self._is_externally_paused:
             self._reset_start_delay()
             self._reset_residual_export()
             self._charging_from_surplus = False
@@ -399,6 +397,20 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 target_current=0,
                 current_limit_reason="external_pause",
                 decision_reason=SOLAR_BALANCE_EXTERNAL_PAUSED,
+            )
+            return
+
+        if not self._has_required_values:
+            self._reset_start_delay()
+            self._reset_residual_export()
+            self._charging_from_surplus = False
+            self._update_solar_balance_state(
+                SOLAR_BALANCE_WAITING_DATA,
+                None,
+                None,
+                None,
+                None,
+                decision_reason="waiting_data",
             )
             return
 
@@ -857,6 +869,13 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             self._grid_power is not None
             and self._ev_power is not None
             and self._battery_power is not None
+        )
+
+    @property
+    def _is_externally_paused(self) -> bool:
+        return self._reported_mode == MODE_PAUSED or self._reported_state in (
+            STATE_PAUSE,
+            "pause",
         )
 
     async def _async_publish_current(self, current: int) -> None:
