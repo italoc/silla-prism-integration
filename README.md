@@ -257,25 +257,26 @@ Autolimit and pause are intentionally different:
 ## Diagnostic Sensors
 
 When solar balancing is enabled, the integration exposes diagnostic entities for
-each port:
+each port. For a single-port Prism the entity IDs normally use the names below;
+on multi-port devices Home Assistant adds the port number.
 
-| Entity | Description |
-| ------ | ----------- |
-| Solar balance status | Current balancing state: disabled, waiting for data, wallbox paused, waiting for stable surplus, low-surplus hold or charging from surplus. |
-| Solar surplus current | Current in amps available from the calculated surplus. |
-| Stable surplus countdown | Seconds remaining before the integration can start or raise current. |
-| Calculated total surplus | Total power available to the balancing algorithm. |
-| Battery power used in calculation | Battery contribution used by the algorithm. |
-| Grid power used in calculation | Latest Prism grid power used by the algorithm. |
-| Solar production used in calculation | Latest configured solar production sensor value used by the algorithm. |
-| Home load used in calculation | Latest house load value used by the algorithm, corrected for EV power when configured. |
-| Calculated target current | Final current after deadband, ramp and recovery limits. |
-| Raw target current | Current calculated directly from surplus before stabilization. |
-| Battery reserve power | Home-battery charge power currently protected by SOC logic. |
-| Target export power | Configured export buffer. |
-| Unused export power | Export still available beyond target export and deadband. |
-| Residual export countdown | Seconds remaining before unused export can trigger current recovery. |
-| Decision reason | Current reason for the controller decision. |
+| Entity ID | Entity | Description |
+| --------- | ------ | ----------- |
+| `silla_prism_solar_balance_status` | Solar balance status | Current balancing state: disabled, waiting for data, wallbox paused, waiting for stable surplus, low-surplus hold or charging from surplus. |
+| `silla_prism_solar_balance_surplus_current` | Solar surplus current | Current in amps available from the calculated surplus. |
+| `silla_prism_solar_balance_start_countdown` | Stable surplus countdown | Seconds remaining before the integration can start or raise current from a waiting/low-surplus state. |
+| `silla_prism_solar_balance_available_power` | Calculated total surplus | Total power available to the balancing algorithm. |
+| `silla_prism_solar_balance_battery_power_used` | Battery power used in calculation | Battery contribution used by the algorithm. |
+| `silla_prism_solar_balance_grid_power` | Grid power used in calculation | Latest Prism grid power used by the algorithm. |
+| `silla_prism_solar_balance_solar_power` | Solar production used in calculation | Latest configured solar production sensor value used by the algorithm. |
+| `silla_prism_solar_balance_home_load_power` | Home load used in calculation | Latest house load value used by the algorithm, corrected for EV power when configured. |
+| `silla_prism_solar_balance_target_current` | Calculated target current | Final current after deadband, ramp and recovery limits. |
+| `silla_prism_solar_balance_raw_target_current` | Raw target current | Current calculated directly from surplus before stabilization. |
+| `silla_prism_solar_balance_battery_reserve_power` | Battery reserve power | Home-battery charge power currently protected by SOC logic. |
+| `silla_prism_solar_balance_target_export_power` | Target export power | Configured export buffer. |
+| `silla_prism_solar_balance_unused_export_power` | Unused export power | Export still available beyond target export and deadband. |
+| `silla_prism_solar_balance_residual_export_countdown` | Residual export countdown | Seconds remaining before unused export can trigger current recovery. |
+| `silla_prism_solar_balance_decision_reason` | Decision reason | Current reason for the controller decision. |
 
 These sensors are the best place to understand why the controller is holding,
 raising or lowering current.
