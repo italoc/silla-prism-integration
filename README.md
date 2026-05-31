@@ -282,9 +282,13 @@ raising or lowering current.
 
 ## Prism Entities
 
-| Entity ID | Type | Description | Unit |
-| --------- | ---- | ----------- | ---- |
-| `silla_prism_online` | Binary sensor | Prism connection state | |
+For a single-port Prism the entity IDs normally use the names below. On
+multi-port devices Home Assistant adds the port number to the port-specific
+entities.
+
+| Entity ID | Type | Description | Unit / values |
+| --------- | ---- | ----------- | ------------- |
+| `silla_prism_online` | Binary sensor | Prism connection state | online/offline |
 | `silla_prism_current_state` | Sensor | Current Prism state | `idle`, `waiting`, `charging`, `pause` |
 | `silla_prism_power_grid_voltage` | Sensor | Measured grid voltage | V |
 | `silla_prism_output_power` | Sensor | Power delivered to the charging port | W |
@@ -294,13 +298,19 @@ raising or lowering current.
 | `silla_prism_session_time` | Sensor | Current session duration | s |
 | `silla_prism_session_output_energy` | Sensor | Energy delivered during the current session | Wh |
 | `silla_prism_total_output_energy` | Sensor | Total delivered energy | Wh |
-| `silla_prism_error` | Binary sensor | Error status | |
-| `silla_prism_current_port_mode` | Sensor | Current port mode | `solar`, `normal`, `paused` |
+| `silla_prism_error` | Binary sensor | Error status | on/off |
+| `silla_prism_current_port_mode` | Sensor | Current port mode reported by Prism | `solar`, `normal`, `paused`, `suspended`, `unknown`, `autolimit` |
 | `silla_prism_input_grid_power` | Sensor | Input power from grid | W |
+| `silla_prism_core_temperature` | Sensor | Prism CPU temperature | °C |
 | `silla_prism_set_max_current` | Number | Set user current limit | A |
 | `silla_prism_set_current_limit` | Number | Set active current limit | A |
 | `silla_prism_set_mode` | Select | Set current port mode | `solar`, `normal`, `paused` |
+| `silla_prism_set_mode_traps_auth` | Button | Authorize charging | command |
+| `silla_prism_set_mode_traps_noauth` | Button | Revoke charging authorization | command |
 | `silla_prism_touch_sigle` | Binary sensor | Single touch gesture pulse | on/off |
 | `silla_prism_touch_double` | Binary sensor | Double touch gesture pulse | on/off |
 | `silla_prism_touch_long` | Binary sensor | Long touch gesture pulse | on/off |
-| `silla_prism_input_grid_energy` | Sensor | Derived total energy taken from grid | Wh |
+| `silla_prism_input_grid_energy` | Sensor | Derived total energy taken from grid, when virtual sensors are enabled | kWh |
+| `silla_prism_powerwall_solar` | Sensor | Legacy Powerwall-compatible PV power sensor, when Powerwall sensors are enabled | W |
+| `silla_prism_powerwall_house` | Sensor | Legacy Powerwall-compatible house power sensor, when Powerwall sensors are enabled | W |
+| `silla_prism_solar_battery_balance` | Switch | Enable or disable automatic solar battery balancing, when configured | on/off |
