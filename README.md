@@ -18,6 +18,7 @@ home-battery priority.
 - [Basic Setup](#basic-setup)
 - [Solar Balancing Setup](#solar-balancing-setup)
 - [Recommended Sensor Setup](#recommended-sensor-setup)
+- [Balancer Overview](#balancer-overview)
 - [How Solar Balancing Works](#how-solar-balancing-works)
 - [Battery Priority](#battery-priority)
 - [Stabilization And Safety](#stabilization-and-safety)
@@ -126,6 +127,16 @@ If the home load sensor includes the EV charger, enable the matching option.
 The controller will subtract live Prism EV output power before calculating
 surplus. Without this correction, increasing EV current also increases the house
 load used by the formula, making the available surplus look too low.
+
+## Balancer Overview
+
+The following overview is exported from draw.io and summarizes the main energy
+signals, controller steps and wallbox protection states.
+
+<img alt="Silla Prism solar balancer overview" src="images/solar-balancer-overview.png" width="760">
+
+The editable draw.io source is available at
+[`images/solar-balancer-overview.drawio`](images/solar-balancer-overview.drawio).
 
 ## How Solar Balancing Works
 
