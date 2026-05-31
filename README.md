@@ -2,503 +2,294 @@
 
 ![Silla Prism Solar](image.png)
 
-This repository contains a custom integration to integrate a Silla Prism EVSE
-inside Home Assistant.
+Custom Home Assistant integration for Silla Prism EVSE devices, based on MQTT.
+This fork keeps the original Prism MQTT integration and adds solar charging
+logic that can balance EV charging with photovoltaic production, house load and
+home-battery priority.
 
-## Fork status
+> **Beta notice:** the solar balancing features actively change Prism current
+> limit and operating mode through MQTT. Test with conservative limits before
+> relying on it unattended.
 
-This project is a fork of
-[persuader72/silla-prism-integration](https://github.com/persuader72/silla-prism-integration).
-The original project provides the base Silla Prism MQTT integration; this fork
-adds experimental solar and home-battery charging logic.
+## Table Of Contents
 
-> **Beta notice:** this fork is still in beta. The solar balancing features can
-> actively change the current limit and operating mode of the EVSE through MQTT.
-> Test carefully with conservative limits before relying on it unattended.
+- [Main Features](#main-features)
+- [Installation](#installation)
+- [Basic Setup](#basic-setup)
+- [Solar Balancing Setup](#solar-balancing-setup)
+- [Recommended Sensor Setup](#recommended-sensor-setup)
+- [How Solar Balancing Works](#how-solar-balancing-works)
+- [Battery Priority](#battery-priority)
+- [Stabilization And Safety](#stabilization-and-safety)
+- [Solar Balancing Options](#solar-balancing-options)
+- [Diagnostic Sensors](#diagnostic-sensors)
+- [Prism Entities](#prism-entities)
 
-## New features in this fork
+## Main Features
 
-- Solar battery balancing switch per Prism charging port.
-- Dynamic EV current control from Prism MQTT data, grid import/export, EV output
-  power, port voltage and a Home Assistant home-battery power sensor.
-- Optional home-battery SOC sensor selected directly from Home Assistant.
-- Entity selectors for both the home-battery power sensor and SOC sensor, so the
-  configuration no longer requires manually typing entity IDs.
-- Configurable single-phase or three-phase surplus calculation.
-- Configurable target grid export, import/export deadband and stable-surplus
-  start delay to avoid chasing noisy measurements.
-- Slow current ramp-up and fast ramp-down to reduce unwanted grid imports.
-- Residual export recovery, which increases current by 1A after stable unused
-  export remains available.
-- Proportional current correction, so large sustained export can increase
-  current faster while real import can reduce it faster.
-- Automatic home-battery priority based on SOC:
-  - low SOC reserves the configured battery charge power for the home battery;
-  - medium SOC reserves a smaller configurable amount;
-  - high SOC reserves an even smaller configurable amount;
-  - SOC >= 95% gives priority to the EV.
-- In solar mode, temporary low surplus no longer pauses the port; the
-  controller keeps the EVSE in solar mode at 6A and raises current again when
-  surplus returns. If the current limit was changed manually, that manual limit
-  is preserved while low surplus remains. If Prism enters autolimit because of
-  house-load protection, the controller waits until grid import is back inside
-  the configured deadband, then makes one 6A recovery attempt with a cooldown to
-  avoid command loops. If Prism reports paused mode/state, for example because a
-  charge limit was reached, the controller respects that pause and does not
-  force solar mode again.
-- Diagnostic sensors for calculated surplus, target current, grid power,
-  battery power used in the calculation and controller decision reason.
+- Silla Prism MQTT entities for state, power, current, energy, mode and touch
+  gestures.
+- Optional `Solar battery balancing` switch for each charging port.
+- EV current control from Prism data, configured Home Assistant sensors and
+  user-defined safety limits.
+- Direct surplus calculation from external solar production and house load
+  sensors.
+- Optional correction for house-load sensors that include the EV charger.
+- Home-battery priority based on battery power and optional SOC.
+- Configurable export buffer, deadband, start delay, ramp-up, ramp-down and
+  residual export recovery.
+- Autolimit-aware recovery and explicit pause handling, so the integration does
+  not fight wallbox protection states or user/app pauses.
+- Diagnostic sensors that explain the latest balancing decision.
 
 ## Installation
 
-Prerequisites: A working MQTT server.
+Prerequisites:
 
-1) Configure the Prism EVSE to work with your MQTT server as shown in the
+- A working MQTT broker.
+- Home Assistant MQTT integration configured and connected to the same broker.
+- Prism MQTT enabled on the wallbox.
+
+Steps:
+
+1. Configure the Prism EVSE to use your MQTT broker. See the
    [Prism MQTT manual](https://support.silla.industries/wp-content/uploads/2023/09/DOC-Prism_MQTT_Manual-rel.2.0_rev.-20220105-EN.pdf).
-2) Configure and enable the [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) for Home Assistant.
-3) Install this custom integration with HACS as a custom repository, or copy the
-   `custom_components/silla_prism` directory into your Home Assistant
+2. Install this repository with HACS as a custom repository, or copy
+   `custom_components/silla_prism` into your Home Assistant
    `custom_components` directory.
+3. Restart Home Assistant.
+4. Add the Silla Prism integration from the Home Assistant dashboard.
 
-## Usage
+[![Open your Home Assistant instance and start setting up a new integration of a specific brand.](https://my.home-assistant.io/badges/brand.svg)](https://my.home-assistant.io/redirect/brand/?brand=silla_prism)
 
-1. Add the Silla Prism integration from the Home Assistant dashboard.
-   [![Open your Home Assistant instance and start setting up a new integration of a specific brand.](https://my.home-assistant.io/badges/brand.svg)](https://my.home-assistant.io/redirect/brand/?brand=silla_prism)
+## Basic Setup
 
-2. Keep note of base path for all Prism topics
+First configure Prism MQTT in the Silla app and keep the same base topic in
+Home Assistant.
 
-   <img alt="Prism custom MQTT setup" src="images/setup-mqtt-custom.png" width="420">
+<img alt="Prism custom MQTT setup" src="images/setup-mqtt-custom.png" width="420">
 
-3. **Topic**: set the base path for all Prism topics. It must match the value
-   configured in Prism. Keep the trailing **/** at the end of the topic.
+During integration setup:
 
-4. **Number of ports**: if you have more than one port, for example Prism Duo,
-   set the matching number of ports. For a single-port Prism, keep the default
-   value of `1`.
+| Field | What to enter |
+| ----- | ------------- |
+| Topic | Prism MQTT base topic. It must match the Prism app value and keep the trailing `/`. |
+| Number of ports | Use `1` for a single-port Prism, or the actual number for multi-port models. |
+| Serial number / unique code | Optional for a single Prism; useful when more than one Prism is connected. |
+| Enable virtual sensor | Adds derived entities, such as total grid energy. |
+| Max current | Upper current limit the integration is allowed to request. |
 
-5. **Serial number** or **unique code**: if you have more than one Prism
-   connected to Home Assistant, fill this with a unique value, such as the serial
-   number. For a single Prism, this can stay blank.
+## Solar Balancing Setup
 
-6. **Enable virtual sensor**: enables additional sensors derived from the
-   original Prism sensors, such as total energy imported from the grid.
+The setup/reconfigure form includes the solar balancing options. The most
+important rule is simple: if possible, configure real external sensors for solar
+production and house load. The integration intentionally does not rely on Prism
+`energy_data/power_solar` and `energy_data/power_house` for balancing because
+they can remain at `0` on some installations.
 
-7. Configure the integration options. The setup form now includes inline field
-   descriptions and examples for the solar battery balancing options.
+<img alt="Silla Prism configuration connection and battery sensors" src="images/config-solar-battery-1-connection.png" width="480">
 
-   <img alt="Silla Prism configuration connection and battery sensors" src="images/config-solar-battery-1-connection.png" width="520">
+Select:
 
-   The first part contains the MQTT topic, the maximum current limit, the switch
-   that enables solar battery balancing, and the Home Assistant sensors used for
-   home-battery power, real solar production, optional house load and SOC.
-   Select the battery power sensor in W and, when you want the direct
-   solar-minus-house calculation, select both a solar production sensor in W and
-   a house load sensor in W. The house load sensor should exclude the EV charger
-   when possible; if your meter includes the EV charger, create a template sensor
-   that subtracts Prism EV output power. Enable the battery sign option when your
-   battery sensor is positive while discharging and negative while charging.
+- `Battery power sensor`: home battery charge/discharge power in W.
+- `Solar production power sensor`: real PV production in W.
+- `Home load power sensor`: house load in W.
+- `Home load sensor includes EV charger`: enable it when the house load sensor
+  is a total-load sensor that also includes the wallbox/EV charger.
+- `Home battery SOC sensor`: optional battery state of charge in %.
 
-   <img alt="Silla Prism configuration battery priority and charging phases" src="images/config-solar-battery-2-battery-priority.png" width="520">
+<img alt="Silla Prism configuration battery priority and charging phases" src="images/config-solar-battery-2-battery-priority.png" width="480">
 
-   The second part sets the low-SOC battery reserve, the number of EV charging
-   phases, the stable surplus delay, and whether battery charging power can be
-   treated as EV surplus. Use `1` for single-phase charging or `3` for
-   three-phase charging. In solar mode, low surplus is held at 6A instead of
-   pausing the port, so the delay only affects when current can rise above the
-   minimum.
+Set the low-SOC battery reserve, charging phases, stable surplus delay, and
+whether battery charge power above the reserve can be used as EV surplus.
 
-   <img alt="Silla Prism configuration SOC reserves and ramp settings" src="images/config-solar-battery-3-reserves-ramp.png" width="520">
+<img alt="Silla Prism configuration SOC reserves and ramp settings" src="images/config-solar-battery-3-reserves-ramp.png" width="480">
 
-   The third part defines the SOC thresholds and the power still reserved for
-   the home battery at medium and high SOC. It also sets the target grid export,
-   the import/export deadband, and the minimum interval between current
-   increases. These values decide how aggressively the controller gives direct
-   solar production to the EV while avoiding unwanted grid import.
+Set the SOC thresholds, medium/high battery reserves, target grid export,
+deadband and current increase interval.
 
-   <img alt="Silla Prism configuration current steps and residual export recovery" src="images/config-solar-battery-4-export-recovery.png" width="520">
+<img alt="Silla Prism configuration current steps and residual export recovery" src="images/config-solar-battery-4-export-recovery.png" width="480">
 
-   The last part controls the current ramp steps and residual export recovery.
-   The increase step limits how quickly current rises, the decrease step lets
-   the controller react faster when house loads appear, and residual export
-   recovery adds current again if export remains unused for the configured time.
+Set how quickly current can rise or fall, and when persistent unused export
+should recover one more amp.
 
-## Solar battery balancing
+## Recommended Sensor Setup
 
-The integration can optionally create a `Solar battery balancing` switch for each
-charging port. When enabled, it reads the Prism grid power, the Prism output
-power, the port voltage and a Home Assistant battery power sensor, then updates
-the Prism current limit so the EV uses only the available solar surplus without
-discharging the battery.
+| Sensor | Required | Notes |
+| ------ | -------- | ----- |
+| Solar production | Recommended | Real PV production in W. Required for the direct solar-minus-house formula. |
+| Home load | Recommended | House load in W. Configure whether it includes the EV charger. |
+| Battery power | Required for balancing | Positive/negative sign can be configured. Internally, positive means discharge and negative means charge. |
+| Battery SOC | Optional | Enables dynamic battery reserve based on SOC thresholds. |
 
-Configure it from the integration setup/reconfigure form:
+If the home load sensor includes the EV charger, enable the matching option.
+The controller will subtract live Prism EV output power before calculating
+surplus. Without this correction, increasing EV current also increases the house
+load used by the formula, making the available surplus look too low.
 
-| Option | Description |
-| ------ | ----------- |
-| Enable solar battery balancing | Creates the balancing switch. |
-| Battery power sensor | Home Assistant entity that reports battery charge/discharge power in W. |
-| Solar production power sensor | Home Assistant entity that reports real PV production in W. Use this instead of Prism `energy_data/power_solar` when that topic is not populated. Required when the home load sensor is configured. |
-| Home load power sensor | Optional Home Assistant entity that reports house load in W. When set together with the solar production sensor, the controller uses external solar production minus external house load to calculate EV surplus. |
-| Home load sensor includes EV charger | Enable this when the home load sensor is a total-load sensor that also includes EV charging. The controller subtracts live Prism EV output power before calculating surplus. |
-| Home battery SOC sensor | Optional Home Assistant entity that reports the home battery state of charge in %. |
-| Battery discharge is a positive value | Enable this if the sensor is positive while the battery is discharging and negative while charging. Disable it if your sensor uses the opposite sign. |
-| Maximum battery charge power | Battery charge power, in W, reserved for the home battery while SOC is low. Default is `2700`. |
-| Number of charging phases | Use `1` for single phase or `3` for three phase charging. |
-| Stable surplus delay | Minutes of continuous surplus required before the integration starts charging. The default is `5`. |
-| Use battery charge as surplus | When enabled, battery charging power is also treated as available EV surplus. This gives the car priority over storing that solar energy first. |
-| Medium home battery SOC | SOC threshold where the reserved battery charge power drops to the medium reserve. Default is `40`. |
-| High home battery SOC | SOC threshold where the reserved battery charge power drops to the high reserve. Default is `80`. |
-| Medium SOC battery reserve | Approximate maximum battery charge power, in W, kept for the home battery at medium SOC before sending the rest to the EV. Default is `1500`. |
-| High SOC battery reserve | Approximate maximum battery charge power, in W, kept for the home battery at high SOC before sending the rest to the EV. Default is `1000`. |
-| Target grid export | Watts to intentionally keep exported as a safety buffer. Default is `150`. |
-| Import/export deadband | Watts around the target export where current is left unchanged. Default is `150`. |
-| Minimum current increase interval | Minimum seconds between upward current steps. Default is `15`. |
-| Maximum current increase step | Maximum amp increase per ramp step. Default is `1`. |
-| Maximum current decrease step | Maximum amp decrease per correction. Default is `3`. |
-| Residual export for current recovery | Extra export that must remain available before adding current beyond the rounded calculation. Default is `400`. |
-| Residual export time before recovery | Seconds residual export must stay above threshold before recovery. Default is `60`. |
+## How Solar Balancing Works
+
+The controller tries to send only usable solar surplus to the EV while keeping a
+configurable safety buffer for the home battery and avoiding unwanted grid
+import. It writes Prism MQTT commands for current limit and solar mode, but it
+does not override wallbox pauses or active autolimit protection.
+
+With solar production and home load sensors configured, the preferred formula
+is:
+
+```text
+effective_home_load = home_load
+if home_load_includes_ev:
+    effective_home_load = max(home_load - ev_power, 0)
+
+available_power = solar_production - effective_home_load
+
+if use_battery_charge and available_power > 0:
+    available_power += max(battery_charge_power - battery_reserve_power, 0)
+
+target_power = available_power - target_grid_export
+```
 
 Without both external solar production and external home load sensors, the
-controller estimates EV surplus from live Prism EV power, grid import/export and
-battery power:
+fallback estimator is:
 
 ```text
 available_power = ev_power - grid_power - battery_power_to_exclude
 target_power = available_power - target_grid_export
 ```
 
-With both external sensors configured, it uses the more direct house-load
-formula. Prism `energy_data/power_solar` and `energy_data/power_house` are not
-used for this direct calculation because on some installations they stay at
-`0`:
+The controller then converts power into current:
 
 ```text
-effective_home_load = home_load_power
-if home_load_includes_ev:
-    effective_home_load = max(home_load_power - ev_power, 0)
-
-available_power = solar_production - effective_home_load
-if use_battery_charge:
-    available_power += battery_charge_available_above_reserve only when solar_production > effective_home_load
-target_power = available_power - target_grid_export
+watts_per_amp = grid_voltage * phases
+target_current = floor(target_power / watts_per_amp)
 ```
 
-This EV correction is important when the configured home load sensor is a total
-site load, such as many inverter/energy-meter sensors. Without it, the car would
-appear as house consumption, so increasing EV current would also increase the
-load used by the formula and the controller would underestimate surplus.
-
-```mermaid
-flowchart TD
-    A["Read live data<br/>grid, EV power, voltage,<br/>external solar production,<br/>external home load, battery power and SOC"] --> B["Protect the home battery<br/>reserve more power at low SOC,<br/>reserve less at high SOC"]
-    B --> C{"Home load sensor<br/>and solar data available?"}
-    C -->|Yes| C1["Calculate direct EV surplus<br/>correct home load if it includes EV<br/>available_power = external solar - corrected home load"]
-    C -->|No| C2["Estimate EV surplus<br/>available_power = EV power - grid power<br/>minus battery power to exclude"]
-    C1 --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
-    C2 --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
-    D --> E{"Enough surplus<br/>for at least 6A?"}
-
-    E -->|No, autolimit active| F{"Grid import<br/>inside deadband?"}
-    E -->|No, no autolimit| G["Keep Prism in solar mode<br/>hold 6A unless current was changed manually"]
-    E -->|Yes| H["Convert surplus to target current<br/>and clamp between 6A and max current"]
-
-    F -->|No| L["Respect Prism autolimit<br/>wait for load to drop"]
-    F -->|Yes, cooldown elapsed| G
-    G --> K["Publish MQTT commands<br/>set_current_limit and solar mode"]
-    H --> I["Stabilize current<br/>deadband avoids oscillation<br/>slow ramp-up and faster ramp-down"]
-    I --> J["Recover unused export<br/>add current if export stays available"]
-    J --> K["Publish MQTT commands<br/>set_current_limit and solar mode"]
-```
-
-With the default sign convention, battery discharge reduces the available EV
-power in the fallback estimator, while battery charge is not counted as available
-power. With both external solar production and home load sensors, battery
-discharge is not treated as EV surplus: the EV receives only direct solar left
-after the configured house load. If the configured house load sensor includes
-the EV charger, the controller subtracts live Prism EV output power first so the
-car does not count against the house load. Optional battery charge power above
-the protected reserve is added only when solar production already exceeds the
-corrected house load. If the available power is below the minimum Type 2 current
-of 6A while solar balancing is
-enabled, the port is kept in solar mode at 6A instead of being paused. If the
-current limit was changed manually, the controller preserves that manual limit
-while low surplus remains. If Prism reports autolimit mode, the controller
-treats that as a wallbox protection state. It does not force solar mode while
-there is real grid import above the configured deadband. Once the load has
-dropped and grid import is back inside the deadband, it tries one recovery at
-6A, then waits 5 minutes before any further autolimit recovery attempt.
-If Prism reports paused mode or pause state, the controller treats it as a
-deliberate wallbox pause, for example a charge limit reached in the wallbox/app,
-and does not resume charging automatically. Change the port mode back to
-solar/normal or toggle the balancing switch when you want the controller to take
-over again.
-If `Use battery charge as surplus` is enabled, battery charging power is counted
-too, but only for the part that exceeds the battery charge power currently
-reserved for the home battery. The controller also uses live battery charge
-power as feedback: if the battery is still charging above the configured reserve
-and grid import is not excessive, it can raise EV current gradually to bring
-battery charging back toward that maximum. Because the EV current changes in 1A
-steps, the battery target is approximate. Without a SOC sensor, the fixed
-reserve is the configured maximum battery charge power. With a SOC sensor, the
-reserve is dynamic: low SOC reserves the configured maximum charge power, medium
-SOC reserves the medium value, high SOC reserves the high value, and SOC >= 95%
-reserves `0 W` so the EV gets priority. This lets the car use direct solar
-energy while still protecting the home battery when it is low. The EV current
-follows the calculated surplus, clamped between the Type 2 minimum of 6A and the
+The final current is clamped between the Type 2 minimum of `6A` and the
 configured maximum current.
-The controller then applies a target export, a deadband, ramp limits and
-residual export recovery. By default it tries to keep about `150 W` exported,
-ignores changes within `150 W`, increases by at most `1A` every `15` seconds,
-decreases by up to `3A` immediately, and adds `1A` if more than `400 W` remains
-exported for `60` seconds. Residual export recovery is also active while the
-port is held at the 6A minimum, so persistent export can raise the EV current
-instead of being sold to the grid.
-Before raising current above the minimum from a low-surplus hold, the surplus
-can be delayed by the configured ramp and stabilization settings. This helps
-avoid short clouds or transient loads repeatedly changing the car current. If
-surplus drops below the Type 2 minimum, the port is kept in solar mode at 6A
-instead of being paused, unless Prism reports autolimit and grid import is still
-above the deadband.
 
-When enabled, the integration also exposes additional sensors for each port:
+## Battery Priority
+
+The battery reserve is the amount of charge power the controller tries to leave
+for the home battery before giving the rest to the EV.
+
+With a SOC sensor:
+
+| Battery SOC | Reserve used |
+| ----------- | ------------ |
+| Below medium SOC | Maximum battery charge power |
+| At or above medium SOC | Medium SOC battery reserve |
+| At or above high SOC | High SOC battery reserve |
+| At or above 95% | `0 W` |
+
+When `Use battery charge as surplus` is enabled, the reserve is also treated as
+an approximate maximum battery charge target. If the battery is still charging
+above that target and grid import is not excessive, EV current can rise
+gradually to bring battery charging back toward the configured reserve. The
+result is approximate because Prism current changes in whole amps.
+
+## Stabilization And Safety
+
+To avoid loops and oscillation, the controller applies several guards:
+
+| Mechanism | Purpose |
+| --------- | ------- |
+| Target export | Keeps a small export buffer before giving power to the EV. |
+| Deadband | Leaves current unchanged near the target export. |
+| Stable surplus delay | Waits before starting or raising from idle/low-surplus conditions. |
+| Increase interval and step | Raises current gradually. |
+| Decrease step | Drops current faster when house loads appear. |
+| Residual export recovery | Adds current when export remains unused long enough. |
+
+Low surplus is handled without stopping solar charging: if target power is below
+the Type 2 minimum, Prism is kept in solar mode at `6A`. If the user manually
+changed the current limit, the integration preserves that manual limit while low
+surplus remains. If there is persistent real grid export, residual export
+recovery can raise current above `6A` after the configured delay.
+
+Autolimit and pause are intentionally different:
+
+- `autolimit`: treated as wallbox protection. The integration does not force
+  solar mode while grid import is above the deadband. When import returns inside
+  the deadband, it makes one `6A` recovery attempt and then waits 5 minutes
+  before trying again.
+- `paused`: treated as a deliberate wallbox/app pause, for example a charge
+  limit reached. The integration does not resume charging automatically.
+
+## Solar Balancing Options
+
+| Option | Description |
+| ------ | ----------- |
+| Enable solar battery balancing | Creates the balancing switch. |
+| Battery power sensor | Home Assistant entity that reports battery charge/discharge power in W. |
+| Solar production power sensor | Home Assistant entity that reports real PV production in W. |
+| Home load power sensor | Home Assistant entity that reports house load in W. |
+| Home load sensor includes EV charger | Subtracts live Prism EV output power from the house load before calculating surplus. |
+| Home battery SOC sensor | Optional entity that reports home battery state of charge in %. |
+| Battery discharge is a positive value | Enable if the battery sensor is positive while discharging and negative while charging. |
+| Maximum battery charge power | Battery charge power reserved while SOC is low. Default is `2700 W`. |
+| Number of charging phases | Use `1` for single phase or `3` for three phase charging. |
+| Stable surplus delay | Minutes of continuous surplus required before current can rise from idle/low surplus. Default is `5`. |
+| Use battery charge as surplus | Lets battery charge power above the reserve become available EV surplus. |
+| Medium home battery SOC | SOC threshold where the reserve drops to the medium value. Default is `40%`. |
+| High home battery SOC | SOC threshold where the reserve drops to the high value. Default is `80%`. |
+| Medium SOC battery reserve | Approximate maximum battery charge power kept at medium SOC. Default is `1500 W`. |
+| High SOC battery reserve | Approximate maximum battery charge power kept at high SOC. Default is `1000 W`. |
+| Target grid export | Watts intentionally kept exported as a safety buffer. Default is `150 W`. |
+| Import/export deadband | Watts around the target export where current is left unchanged. Default is `150 W`. |
+| Minimum current increase interval | Minimum seconds between upward current steps. Default is `15`. |
+| Maximum current increase step | Maximum amp increase per ramp step. Default is `1A`. |
+| Maximum current decrease step | Maximum amp decrease per correction. Default is `3A`. |
+| Residual export for current recovery | Extra export required before adding current beyond the rounded calculation. Default is `400 W`. |
+| Residual export time before recovery | Seconds residual export must stay above threshold before recovery. Default is `60`. |
+
+## Diagnostic Sensors
+
+When solar balancing is enabled, the integration exposes diagnostic entities for
+each port:
 
 | Entity | Description |
 | ------ | ----------- |
-| Solar balance status | Shows whether balancing is disabled, waiting for data, paused by the wallbox, waiting for stable surplus, holding at 6A for low surplus or charging from surplus. |
-| Solar surplus current | Current in amps currently available from the calculated solar surplus. |
-| Stable surplus countdown | Seconds remaining before the integration starts charging automatically. |
+| Solar balance status | Current balancing state: disabled, waiting for data, wallbox paused, waiting for stable surplus, low-surplus hold or charging from surplus. |
+| Solar surplus current | Current in amps available from the calculated surplus. |
+| Stable surplus countdown | Seconds remaining before the integration can start or raise current. |
 | Calculated total surplus | Total power available to the balancing algorithm. |
-| Battery power used in calculation | Battery contribution used by the algorithm. Positive values reduce EV power, negative values increase available EV power. |
-| Grid power used in calculation | Latest Prism grid power value used by the algorithm. |
+| Battery power used in calculation | Battery contribution used by the algorithm. |
+| Grid power used in calculation | Latest Prism grid power used by the algorithm. |
 | Solar production used in calculation | Latest configured solar production sensor value used by the algorithm. |
-| Home load used in calculation | Latest home load value used by the algorithm; if the EV-included option is enabled, this is the corrected value after subtracting Prism EV output power. |
-| Calculated target current | Final current the algorithm wants to send to Prism after deadband, ramp and recovery limits. |
-| Raw target current | Current calculated directly from surplus before stabilisation. |
-| Battery reserve power | Home-battery charge power currently protected by the SOC logic. |
-| Target export power | Configured export buffer used by the controller. |
-| Unused export power | Export still available beyond the target export and deadband; this is the power the EV could still recover. |
-| Residual export countdown | Seconds remaining before unused export can trigger a current recovery step. |
-| Decision reason | The current reason for the controller decision. |
+| Home load used in calculation | Latest house load value used by the algorithm, corrected for EV power when configured. |
+| Calculated target current | Final current after deadband, ramp and recovery limits. |
+| Raw target current | Current calculated directly from surplus before stabilization. |
+| Battery reserve power | Home-battery charge power currently protected by SOC logic. |
+| Target export power | Configured export buffer. |
+| Unused export power | Export still available beyond target export and deadband. |
+| Residual export countdown | Seconds remaining before unused export can trigger current recovery. |
+| Decision reason | Current reason for the controller decision. |
 
-The solar balance diagnostic entities also expose extra attributes including
-`battery_soc`, `battery_reserve_power`, `battery_charge_power`,
-`battery_discharge_power`, `solar_power`, `home_load_power`, `surplus_source`,
-`available_power`, `target_power`,
-`raw_target_current`, `target_current`, `unused_export_power`,
-`excess_import_power`, `deadband_active`, `ramp_limited`, `ramp_direction` and
-`current_limit_reason`.
+These sensors are the best place to understand why the controller is holding,
+raising or lowering current.
 
-## Entities
+## Prism Entities
 
-| Entity ID                         | Type         | Description                                                  | Unit                                   |
-| --------------------------------- | ------------ | ------------------------------------------------------------ | -------------------------------------- |
-| silla_prism_online                | BinarySensor | Sensor to find if Prism is connected or not                  |                                        |
-| silla_prism_current_state         | Sensor       | Current state of Prism                                       | "idle", "waiting", "charging", "pause" |
-| silla_prism_power_grid_voltage    | Sensor       | Measured voltage from grid                                   | V                                      |
-| silla_prism_output_power          | Sensor       | Power provided to the charging port                          | W                                      |
-| silla_prism_output_current        | Sensor       | Current provided to the charging port                        | mA                                     |
-| silla_prism_output_car_current    | Sensor       | Current driven by the car                                    | A                                      |
-| silla_prism_current_set_by_user   | Sensor       | Current limit set by user                                    | A                                      |
-| silla_prism_session_time          | Sensor       | Duration of the current session                              | s                                      |
-| silla_prism_session_output_energy | Sensor       | Energy provided to the charging port during the current session | Wh                                     |
-| silla_prism_total_output_energy   | Sensor       | Total energy                                                 | Wh                                     |
-| silla_prism_error                 | BinarySensor | Error status (ON when there is an error)                     |                                        |
-| silla_prism_current_port_mode     | Sensor       | Current port mode                                            | solar,normal,paused                    |
-| silla_prism_input_grid_power      | Sensor       | Input power from grid                                        | W                                      |
-| silla_prism_set_max_current       | Number       | Set the user current limit                                   | A                                      |
-| silla_prism_set_current_limit     | Number       | Set the  current limit                                       | A                                      |
-| silla_prism_set_mode              | Select       | Set current port mode                                        | solar,normal,paused                    |
-| silla_prism_touch_sigle           | BinarySensor | Goes on for 1 second after a single touch gesture            | On,Off                                 |
-| silla_prism_touch_double          | BinarySensor | Goes on for 1 second after a double touch gesture            | On,Off                                 |
-| silla_prism_touch_long            | BinarySensor | Goes on for 1 second after a long touch gesture              | On,Off                                 |
-
-## Computed Entities
-
-Computed entities are not directly measured from Prism but are derived from other measurements. 
-
-| Entity ID                     | Type   | Description                  | Unit |
-| ----------------------------- | ------ | ---------------------------- | ---- |
-| silla_prism_input_grid_energy | Sensor | Total energy taken from grid | Wh   |
-|                               |        |                              |      |
-|                               |        |                              |      |
-
-
-# Setting up the user interface
-
-## With the charger card integration
-
-<img alt="EV Charger Card preview" src="images/charger-card-preview.png" width="360">
-
-It's possible to configure the [EV Charger Card](https://github.com/tmjo/charger-card) using the configuration example [provided](https://github.com/persuader72/custom-components/blob/main/charger-card/template.yaml) in this repository 
-
-## With automations and helpers
-
-The following four examples show how to set up a simple interface
-via Home Assistant helpers (input booleans) and automations.  You do
-not have to use all four!
-
-These automations and input booleans can also be used with the
-EV Charger Card, though they are most useful without it.
-
-### Start/stop charge with a switch
-
-For now, disable Autostart on the Prism (later I will show how to keep
-it enabled).
-
-Create an "Input Boolean" called `prism_charge` (suggested icon:
-`mdi:ev-plug-type2`).  The following automation starts and stop the
-charging process when `prism_charge` is toggled:
-
-```yaml
-alias: Prism - authorize/deauthorize
-triggers:
-  - trigger: state
-    entity_id:
-      - input_boolean.prism_charge
-    id: changed_switch
-  - trigger: state
-    entity_id:
-      - sensor.silla_prism_current_state
-    id: changed_state
-actions:
-  - if:
-      - condition: state
-        entity_id: sensor.silla_prism_current_state
-        state: idle
-    then:
-      - action: input_boolean.turn_off
-        target:
-          entity_id: input_boolean.prism_charge
-      - stop: No charging cable connected
-  - condition: trigger
-    id:
-      - changed_switch
-  - if:
-      - condition: state
-        entity_id: input_boolean.prism_charge
-        state: 'on'
-    then:
-      - action: button.press
-        target:
-          entity_id: button.silla_prism_set_mode_traps_auth
-    else:
-      - action: button.press
-        target:
-          entity_id: button.silla_prism_set_mode_traps_noauth
-mode: single
-```
-
-### Start/stop charge with a single touch on the Prism
-
-With the previous set up, Autostart is disabled, but starting/stopping
-the charge process with the Prism key fobs does not synchronize with
-the Input Boolean.
-
-Instead of using the key fobs, you can configure another automation that
-toggles the Input Boolean with a single touch on the Prism's sensor:
-
-```yaml
-alias: Prism - toggle charge after single touch event
-description: ""
-triggers:
-  - trigger: state
-    entity_id:
-      - binary_sensor.silla_prism_touch_sigle
-    to: on
-actions:
-  - action: input_boolean.toggle
-    target:
-      entity_id: input_boolean.prism_charge
-mode: single
-```
-
-### Same setup but with Autostart enabled
-
-If you prefer to keep Autostart enabled or to use the key fobs, just ensure
-`prism_charge` changes to on and off when `sensor.silla_prism_current_state`
-becomes respectively `charging` or anything else:
-
-```yaml
-alias: Prism - synchronize charging state
-description: ""
-triggers:
-  - trigger: state
-    entity_id:
-      - sensor.silla_prism_current_state
-    id: changed_prism
-actions:
-  - if:
-      - condition: state
-        entity_id: sensor.silla_prism_current_state
-        state: charging
-    then:
-      - action: input_boolean.turn_on
-        target:
-          entity_id: input_boolean.prism_charge
-  - else:
-      - action: input_boolean.turn_off
-        target:
-          entity_id: input_boolean.prism_charge
-mode: single
-```
-
-This can be used with any combination of the previous automations.
-
-### Switch normal/solar modes from Home Assistant
-
-Create an "Input Boolean" called `prism_solar_mode` (suggested icon:
-`mdi:weather-sunny`).  The following automation keeps it synchronized
-with the "solar" and "normal" modes of the Prism dashboard:
-
-```yaml
-alias: Prism - synchronize solar/normal mode
-description: ""
-triggers:
-  - trigger: state
-    entity_id:
-      - input_boolean.prism_solar_mode
-    id: changed_helper
-  - trigger: state
-    entity_id:
-      - sensor.silla_prism_current_port_mode
-    id: changed_prism
-actions:
-  - if:
-      - condition: trigger
-        id:
-          - changed_helper
-    then:
-      - if:
-          - condition: state
-            entity_id: input_boolean.prism_solar_mode
-            state: on
-        then:
-          - action: select.select_option
-            data:
-              option: solar
-            target:
-              entity_id: select.silla_prism_set_mode
-        else:
-          - action: select.select_option
-            data:
-              option: normal
-            target:
-              entity_id: select.silla_prism_set_mode
-    else:
-      - if:
-          - condition: state
-            entity_id: sensor.silla_prism_current_port_mode
-            state: solar
-        then:
-          - action: input_boolean.turn_on
-            target:
-              entity_id: input_boolean.prism_solar_mode
-      - if:
-          - condition: state
-            entity_id: sensor.silla_prism_current_port_mode
-            state: normal
-        then:
-          - action: input_boolean.turn_off
-            target:
-              entity_id: input_boolean.prism_solar_mode
-mode: single
-```
+| Entity ID | Type | Description | Unit |
+| --------- | ---- | ----------- | ---- |
+| `silla_prism_online` | Binary sensor | Prism connection state | |
+| `silla_prism_current_state` | Sensor | Current Prism state | `idle`, `waiting`, `charging`, `pause` |
+| `silla_prism_power_grid_voltage` | Sensor | Measured grid voltage | V |
+| `silla_prism_output_power` | Sensor | Power delivered to the charging port | W |
+| `silla_prism_output_current` | Sensor | Current delivered to the charging port | mA |
+| `silla_prism_output_car_current` | Sensor | Current requested by the car | A |
+| `silla_prism_current_set_by_user` | Sensor | Current limit set by the user | A |
+| `silla_prism_session_time` | Sensor | Current session duration | s |
+| `silla_prism_session_output_energy` | Sensor | Energy delivered during the current session | Wh |
+| `silla_prism_total_output_energy` | Sensor | Total delivered energy | Wh |
+| `silla_prism_error` | Binary sensor | Error status | |
+| `silla_prism_current_port_mode` | Sensor | Current port mode | `solar`, `normal`, `paused` |
+| `silla_prism_input_grid_power` | Sensor | Input power from grid | W |
+| `silla_prism_set_max_current` | Number | Set user current limit | A |
+| `silla_prism_set_current_limit` | Number | Set active current limit | A |
+| `silla_prism_set_mode` | Select | Set current port mode | `solar`, `normal`, `paused` |
+| `silla_prism_touch_sigle` | Binary sensor | Single touch gesture pulse | on/off |
+| `silla_prism_touch_double` | Binary sensor | Double touch gesture pulse | on/off |
+| `silla_prism_touch_long` | Binary sensor | Long touch gesture pulse | on/off |
+| `silla_prism_input_grid_energy` | Sensor | Derived total energy taken from grid | Wh |
