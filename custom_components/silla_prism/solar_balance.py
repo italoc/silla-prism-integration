@@ -17,7 +17,12 @@ SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING = "low_surplus_keep_charging"
 
 @dataclass(slots=True)
 class SolarBalanceState:
-    """Store the latest solar balance calculation for one port."""
+    """Store one complete balancing decision for diagnostics.
+
+    The switch entity owns the control loop; sensor entities only render this
+    snapshot so users can see why the controller changed, held or skipped
+    current.
+    """
 
     status: str = SOLAR_BALANCE_WAITING_DATA
     surplus_current: float | None = None

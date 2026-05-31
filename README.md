@@ -172,19 +172,26 @@ used for this direct calculation because on some installations they stay at
 `0`:
 
 ```text
-available_power = solar_production - home_load_power
+effective_home_load = home_load_power
 if home_load_includes_ev:
-    available_power += ev_power
+    effective_home_load = max(home_load_power - ev_power, 0)
+
+available_power = solar_production - effective_home_load
 if use_battery_charge:
-    available_power += battery_charge_available_above_reserve only when solar_production > home_load_power
+    available_power += battery_charge_available_above_reserve only when solar_production > effective_home_load
 target_power = available_power - target_grid_export
 ```
+
+This EV correction is important when the configured home load sensor is a total
+site load, such as many inverter/energy-meter sensors. Without it, the car would
+appear as house consumption, so increasing EV current would also increase the
+load used by the formula and the controller would underestimate surplus.
 
 ```mermaid
 flowchart TD
     A["Read live data<br/>grid, EV power, voltage,<br/>external solar production,<br/>external home load, battery power and SOC"] --> B["Protect the home battery<br/>reserve more power at low SOC,<br/>reserve less at high SOC"]
     B --> C{"Home load sensor<br/>and solar data available?"}
-    C -->|Yes| C1["Calculate direct EV surplus<br/>available_power = external solar - external home load<br/>plus optional battery charge above reserve"]
+    C -->|Yes| C1["Calculate direct EV surplus<br/>correct home load if it includes EV<br/>available_power = external solar - corrected home load"]
     C -->|No| C2["Estimate EV surplus<br/>available_power = EV power - grid power<br/>minus battery power to exclude"]
     C1 --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
     C2 --> D["Keep a small grid export target<br/>target_power = available_power - target_grid_export"]
@@ -210,9 +217,8 @@ after the configured house load. If the configured house load sensor includes
 the EV charger, the controller subtracts live Prism EV output power first so the
 car does not count against the house load. Optional battery charge power above
 the protected reserve is added only when solar production already exceeds the
-corrected house load. If
-the available
-power is below the minimum Type 2 current of 6A while solar balancing is
+corrected house load. If the available power is below the minimum Type 2 current
+of 6A while solar balancing is
 enabled, the port is kept in solar mode at 6A instead of being paused. If the
 current limit was changed manually, the controller preserves that manual limit
 while low surplus remains. If Prism reports autolimit mode, the controller

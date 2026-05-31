@@ -433,6 +433,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         available_power, surplus_source = self._get_available_power(
             battery_charge_available, battery_power_to_exclude
         )
+        # Target power keeps a small export buffer so noisy measurements do not
+        # accidentally pull from the grid while the EV current ramps.
         target_power = available_power - self._target_export_power
         min_power = MIN_CHARGE_CURRENT * voltage * self._phases
         watts_per_amp = voltage * self._phases
@@ -440,6 +442,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._reset_current_diagnostics()
 
         if target_power < min_power:
+            # Type 2 charging cannot run below 6A. In low-surplus situations we
+            # keep Prism in solar mode at the minimum, unless Prism itself is in
+            # autolimit, and separately recover stable export when it appears.
             self._reset_start_delay()
             surplus_current = max(target_power / watts_per_amp, 0)
             if self._reported_mode == MODE_AUTOLIMIT:
@@ -603,6 +608,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         ):
             solar_production = abs(self._solar_power)
             home_load_power = max(self._home_load_power, 0)
+            # Some meters report total site load, including the EV. Remove the
+            # live Prism output so the car does not reduce its own surplus.
             if self._home_load_includes_ev:
                 home_load_power = max(home_load_power - self._ev_power, 0)
             self._effective_home_load_power = home_load_power
@@ -672,6 +679,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             return target_current
 
         self._track_grid_error()
+        # Battery feedback can ask for more EV current even when the grid is
+        # inside the deadband, because the battery is still charging above the
+        # configured target.
         battery_charge_target_current = self._get_battery_charge_target_current(
             target_current,
             last_current,
@@ -735,6 +745,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         if not self._use_battery_charge or watts_per_amp <= 0:
             return target_current
 
+        # The reserve is treated as an approximate upper target for battery
+        # charging once the user has chosen to prioritize the EV over storage.
         battery_charge_excess = battery_charge_power - battery_reserve_power
         if battery_charge_excess <= self._deadband_power:
             return target_current
@@ -766,12 +778,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return target_current
 
     def _track_grid_error(self) -> None:
+        """Update import/export diagnostics relative to the configured buffer."""
         grid_error = self._grid_power + self._target_export_power
         self._deadband_active = abs(grid_error) <= self._deadband_power
         self._unused_export_power = max(-grid_error - self._deadband_power, 0)
         self._excess_import_power = max(grid_error - self._deadband_power, 0)
 
     def _track_residual_export(self) -> bool:
+        """Return True once unused export has stayed available long enough."""
         if self._residual_export_power <= 0:
             self._residual_export_remaining = 0
             return False
@@ -827,12 +841,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return limited_current
 
     def _get_proportional_increase_step(self, watts_per_amp: float) -> int:
+        """Scale upward corrections with export, bounded by configured steps."""
         if watts_per_amp <= 0:
             return self._increase_step
         proportional_step = int(self._unused_export_power // watts_per_amp)
         return max(self._increase_step, min(proportional_step, self._decrease_step))
 
     def _get_proportional_decrease_step(self, watts_per_amp: float) -> int:
+        """Scale downward corrections with import so house loads win quickly."""
         if watts_per_amp <= 0:
             return self._decrease_step
         proportional_step = int(self._excess_import_power // watts_per_amp) + 1

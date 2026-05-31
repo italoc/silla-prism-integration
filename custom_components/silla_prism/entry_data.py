@@ -9,7 +9,7 @@ from .solar_balance import SolarBalanceState
 
 @dataclass(slots=True)
 class RuntimeEntryData:
-    """Store runtime data for esphome config entries."""
+    """Store runtime data shared by all entities in one config entry."""
 
     topic: str
     ports: int

@@ -1,0 +1,128 @@
+<mxfile host="app.diagrams.net" modified="2026-05-31T00:00:00.000Z" agent="Codex" version="30.0.4" type="device">
+  <diagram id="solar-balancer-overview" name="Solar balancer">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1260" pageHeight="880" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="bg" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=none;fillColor=#F7F9FC;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1260" height="880" as="geometry"/>
+        </mxCell>
+        <mxCell id="title" value="Silla Prism Solar Balancer" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=30;fontStyle=1;fontColor=#16233A;" vertex="1" parent="1">
+          <mxGeometry x="330" y="26" width="600" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Decides how much current to give the EV using solar, house load, battery and grid data, without overriding wallbox pauses or protection states." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=15;fontColor=#5D6B82;" vertex="1" parent="1">
+          <mxGeometry x="225" y="70" width="810" height="28" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="solar" value="☀️&lt;br&gt;&lt;b&gt;PV panels&lt;/b&gt;&lt;br&gt;real production W" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF3C4;strokeColor=#D89B00;fontSize=16;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="55" y="130" width="170" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="home" value="🏠&lt;br&gt;&lt;b&gt;House&lt;/b&gt;&lt;br&gt;oven, washer, loads" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#E9F0FF;strokeColor=#5B7EC8;fontSize=16;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="545" y="130" width="170" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="battery" value="🔋&lt;br&gt;&lt;b&gt;Home battery&lt;/b&gt;&lt;br&gt;SOC + power W" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#E8F7EE;strokeColor=#3BAE63;fontSize=16;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="130" width="190" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="grid" value="⚡&lt;br&gt;&lt;b&gt;External grid&lt;/b&gt;&lt;br&gt;import + / export -" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF0E8;strokeColor=#D16A35;fontSize=16;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="790" y="130" width="170" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="wallbox" value="🧱🔌&lt;br&gt;&lt;b&gt;Wallbox Prism&lt;/b&gt;&lt;br&gt;EV power, mode, state" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F0EAFE;strokeColor=#8261D1;fontSize=16;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1035" y="130" width="170" height="105" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="controller" value="&lt;b&gt;Home Assistant integration&lt;/b&gt;&lt;br&gt;Solar balancing enabled" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#FFFFFF;strokeColor=#243B63;strokeWidth=2;fontSize=20;fontColor=#16233A;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="250" y="315" width="760" height="275" as="geometry"/>
+        </mxCell>
+        <mxCell id="step1" value="1&lt;br&gt;&lt;b&gt;Reads sensors&lt;/b&gt;&lt;br&gt;PV, house load, EV, grid, battery, SOC" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#EEF4FF;strokeColor=#6689D6;fontSize=14;fontColor=#1F2937;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="285" y="385" width="170" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="step2" value="2&lt;br&gt;&lt;b&gt;Corrects house load&lt;/b&gt;&lt;br&gt;if it includes the EV, subtract EV power" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#EEF4FF;strokeColor=#6689D6;fontSize=14;fontColor=#1F2937;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="475" y="385" width="170" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="step3" value="3&lt;br&gt;&lt;b&gt;Calculates surplus&lt;/b&gt;&lt;br&gt;PV - corrected house load - target export" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#EEF4FF;strokeColor=#6689D6;fontSize=14;fontColor=#1F2937;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="665" y="385" width="170" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="step4" value="4&lt;br&gt;&lt;b&gt;Protects the battery&lt;/b&gt;&lt;br&gt;keeps W reserved based on SOC" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#ECF8F0;strokeColor=#3BAE63;fontSize=14;fontColor=#1F2937;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="380" y="505" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="step5" value="5&lt;br&gt;&lt;b&gt;Chooses amps&lt;/b&gt;&lt;br&gt;6A minimum, configured max, gradual ramp" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F3EEFF;strokeColor=#8261D1;fontSize=14;fontColor=#1F2937;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="625" y="505" width="230" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="arrowSolarController" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=3;strokeColor=#D89B00;fontSize=12;fontColor=#7A5700;" edge="1" parent="1" source="solar" target="step1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrowBatteryController" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=3;strokeColor=#3BAE63;fontSize=12;fontColor=#236B3D;" edge="1" parent="1" source="battery" target="step1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrowHomeController" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=3;strokeColor=#5B7EC8;fontSize=12;fontColor=#375282;" edge="1" parent="1" source="home" target="step1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrowGridController" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=3;strokeColor=#D16A35;fontSize=12;fontColor=#87411C;" edge="1" parent="1" source="grid" target="step1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrowWallboxController" value="" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;rounded=0;strokeWidth=3;strokeColor=#8261D1;fontSize=12;fontColor=#543A91;" edge="1" parent="1" source="wallbox" target="step1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1120" y="285"/>
+              <mxPoint x="370" y="285"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow12" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#243B63;strokeWidth=2;" edge="1" parent="1" source="step1" target="step2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow23" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#243B63;strokeWidth=2;" edge="1" parent="1" source="step2" target="step3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arrow34" value="" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;rounded=0;strokeColor=#243B63;strokeWidth=2;" edge="1" parent="1" source="step3" target="step4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="750" y="495"/>
+              <mxPoint x="485" y="495"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow45" value="" style="endArrow=block;html=1;rounded=0;strokeColor=#243B63;strokeWidth=2;" edge="1" parent="1" source="step4" target="step5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="cmdLabel" value="MQTT: current limit + solar mode" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#543A91;" vertex="1" parent="1">
+          <mxGeometry x="875" y="520" width="285" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="cmd" value="" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;rounded=0;strokeWidth=4;strokeColor=#8261D1;fontStyle=1;fontSize=13;fontColor=#543A91;" edge="1" parent="1" source="step5" target="wallbox">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1135" y="540"/>
+              <mxPoint x="1135" y="255"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="rulesTitle" value="Simple behavior rules" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;fontColor=#16233A;" vertex="1" parent="1">
+          <mxGeometry x="55" y="625" width="360" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="ruleSurplus" value="✅ &lt;b&gt;Enough surplus&lt;/b&gt;&lt;br&gt;computes target amps and ramps up gradually" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#E8F7EE;strokeColor=#3BAE63;fontSize=15;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="55" y="665" width="260" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="ruleLow" value="🌥️ &lt;b&gt;Low surplus&lt;/b&gt;&lt;br&gt;stays in solar mode at 6A without stopping charge" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF8DE;strokeColor=#D89B00;fontSize=15;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="345" y="665" width="260" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="ruleLoad" value="🔥 &lt;b&gt;Heavy house load&lt;/b&gt;&lt;br&gt;reduces current quickly to avoid excessive import" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF0E8;strokeColor=#D16A35;fontSize=15;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="635" y="665" width="260" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="ruleExport" value="↗️ &lt;b&gt;Persistent export&lt;/b&gt;&lt;br&gt;if energy is exported for a while, amps rise even from 6A" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#EAF7FF;strokeColor=#3B8AC4;fontSize=15;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="925" y="665" width="280" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="ruleAutolimit" value="🛡️ &lt;b&gt;Prism autolimit&lt;/b&gt;&lt;br&gt;does not force restart while the wallbox is protecting itself; tries 6A only when grid import returns inside the deadband" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F6F0FF;strokeColor=#8261D1;fontSize=15;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="55" y="770" width="405" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="rulePause" value="⏸️ &lt;b&gt;Wallbox/app pause&lt;/b&gt;&lt;br&gt;if Prism is paused, the integration does not resume it automatically" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F3F5F8;strokeColor=#79879A;fontSize=15;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="490" y="770" width="335" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="ruleDiag" value="📊 &lt;b&gt;Diagnostic sensors&lt;/b&gt;&lt;br&gt;show surplus, target amps, corrected load, battery reserve and decision reason" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#243B63;fontSize=15;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="855" y="770" width="350" height="78" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
