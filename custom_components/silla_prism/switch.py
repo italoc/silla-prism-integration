@@ -129,7 +129,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._grid_voltage: float | None = None
         self._battery_power: float | None = None
         self._battery_soc: float | None = None
-        self._reported_current_limit: int | None = None
         self._last_current_command: int | None = None
         self._last_current_increase: datetime | None = None
         self._last_mode_command: str | None = None
@@ -188,11 +187,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     self.hass,
                     f"{self._base_topic}{self._port}/w",
                     self._mqtt_ev_power_received,
-                ),
-                await mqtt.async_subscribe(
-                    self.hass,
-                    f"{self._base_topic}{self._port}/pilot",
-                    self._mqtt_current_limit_received,
                 ),
                 await mqtt.async_subscribe(
                     self.hass,
@@ -303,14 +297,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
     @callback
     def _mqtt_ev_power_received(self, msg) -> None:
         self._ev_power = self._parse_state(msg.payload)
-        self.hass.async_create_task(self._async_update_balance())
-
-    @callback
-    def _mqtt_current_limit_received(self, msg) -> None:
-        current_limit = self._parse_state(msg.payload)
-        self._reported_current_limit = (
-            None if current_limit is None else int(current_limit)
-        )
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
@@ -641,15 +627,13 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return elapsed >= AUTOLIMIT_RECOVERY_COOLDOWN
 
     def _get_manual_current_override(self) -> int | None:
-        """Return the reported current if it appears to be a manual override."""
-        if (
-            self._reported_current_limit is None
-            or self._last_current_command is None
-            or self._reported_current_limit == self._last_current_command
-            or self._reported_current_limit < MIN_CHARGE_CURRENT
-        ):
+        """Return an explicit HA current override, if the user set one."""
+        manual_current = self._entry_data.solar_balance_manual_current_overrides.get(
+            self._port
+        )
+        if manual_current is None or manual_current < MIN_CHARGE_CURRENT:
             return None
-        return min(self._reported_current_limit, self._max_current)
+        return min(manual_current, self._max_current)
 
     def _get_battery_reserve_power(self) -> float:
         """Return how much battery charge power should be reserved for home storage."""
@@ -977,6 +961,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         )
 
     async def _async_publish_current(self, current: int) -> None:
+        self._entry_data.solar_balance_manual_current_overrides.pop(self._port, None)
         if self._last_current_command == current:
             return
         self._last_current_command = current

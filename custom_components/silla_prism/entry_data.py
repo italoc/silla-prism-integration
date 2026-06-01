@@ -41,3 +41,6 @@ class RuntimeEntryData:
     solar_balance_residual_export_delay: int
     devices: list[DeviceInfo]
     solar_balance_states: dict[int, SolarBalanceState] = field(default_factory=dict)
+    solar_balance_manual_current_overrides: dict[int, int] = field(
+        default_factory=dict
+    )

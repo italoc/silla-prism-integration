@@ -104,6 +104,8 @@ class PrismNumber(PrismBaseEntity, NumberEntity):
         else:
             device = entry_data.devices[port]
 
+        self._entry_data = entry_data
+        self._port = port
         _description = self.description(port, ismultiport, max_current, description)
         super().__init__(
             entry_data,
@@ -143,6 +145,10 @@ class PrismNumber(PrismBaseEntity, NumberEntity):
         #     self._topic_out,
         #     value,
         # )
+        if self.entity_description.translation_key == "set_current_limit":
+            self._entry_data.solar_balance_manual_current_overrides[self._port] = int(
+                value
+            )
         await mqtt.async_publish(self.hass, self._topic_out, int(value))
 
 

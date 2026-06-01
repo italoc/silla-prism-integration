@@ -214,8 +214,10 @@ To avoid loops and oscillation, the controller applies several guards:
 
 Low surplus is handled without stopping solar charging: if target power is below
 the Type 2 minimum, Prism is kept in solar mode at `6A`. If the user manually
-changed the current limit, the integration preserves that manual limit while low
-surplus remains. If there is persistent real grid export, residual export
+changes the `Current limit` number from Home Assistant, the integration
+preserves that manual limit while low surplus remains. The live Prism `pilot`
+value is not treated as a manual override because it also follows the current
+requested by the car. If there is persistent real grid export, residual export
 recovery can raise current above `6A` after the configured delay.
 
 Autolimit and pause are intentionally different:
