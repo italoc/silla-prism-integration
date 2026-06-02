@@ -36,7 +36,11 @@ from .solar_balance import (
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
     SOLAR_BALANCE_WAITING_DATA,
     SolarBalanceState,
+    calculate_available_power,
+    describe_solar_balance_state,
+    get_battery_reserve_power,
     get_solar_balance_signal,
+    normalize_battery_power,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -402,22 +406,20 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             )
             return
 
-        battery_power = self._battery_power
-        if not self._battery_discharge_positive:
-            battery_power = -battery_power
-
         voltage = self._grid_voltage or DEFAULT_GRID_VOLTAGE
-        battery_charge_power = max(-battery_power, 0)
-        battery_discharge_power = max(battery_power, 0)
         battery_reserve_power = self._get_battery_reserve_power()
-        battery_charge_available = max(
-            battery_charge_power - battery_reserve_power, 0
+        battery_breakdown = normalize_battery_power(
+            self._battery_power,
+            self._battery_discharge_positive,
+            battery_reserve_power,
+            self._use_battery_charge,
         )
-        battery_power_to_exclude = battery_discharge_power - (
-            battery_charge_available if self._use_battery_charge else 0
-        )
+        battery_power = battery_breakdown.normalized_power
+        battery_charge_power = battery_breakdown.charge_power
+        battery_discharge_power = battery_breakdown.discharge_power
+        battery_power_to_exclude = battery_breakdown.power_to_exclude
         available_power, surplus_source = self._get_available_power(
-            battery_charge_available, battery_power_to_exclude
+            battery_breakdown.charge_available_above_reserve, battery_power_to_exclude
         )
         # Target power keeps a small export buffer so noisy measurements do not
         # accidentally pull from the grid while the EV current ramps.
@@ -586,29 +588,26 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self, battery_charge_available: float, battery_power_to_exclude: float
     ) -> tuple[float, str]:
         """Return EV surplus power and the source used to calculate it."""
-        if (
-            self._solar_production_sensor
-            and self._home_load_sensor
-            and self._home_load_power is not None
-            and self._solar_power is not None
-        ):
-            solar_production = abs(self._solar_power)
-            home_load_power = max(self._home_load_power, 0)
-            # Some meters report total site load, including the EV. Remove the
-            # live Prism output so the car does not reduce its own surplus.
-            if self._home_load_includes_ev:
-                home_load_power = max(home_load_power - self._ev_power, 0)
-            self._effective_home_load_power = home_load_power
-            available_power = solar_production - home_load_power
-            if self._use_battery_charge and available_power > 0:
-                available_power += battery_charge_available
-            return available_power, "solar_home_load"
-
-        self._effective_home_load_power = None
-        available_power = (
-            self._ev_power - self._grid_power - battery_power_to_exclude
+        result = calculate_available_power(
+            ev_power=self._ev_power,
+            grid_power=self._grid_power,
+            battery_charge_available=battery_charge_available,
+            battery_power_to_exclude=battery_power_to_exclude,
+            use_battery_charge=self._use_battery_charge,
+            solar_power=(
+                self._solar_power
+                if self._solar_production_sensor and self._home_load_sensor
+                else None
+            ),
+            home_load_power=(
+                self._home_load_power
+                if self._solar_production_sensor and self._home_load_sensor
+                else None
+            ),
+            home_load_includes_ev=self._home_load_includes_ev,
         )
-        return available_power, "prism_grid_battery"
+        self._effective_home_load_power = result.effective_home_load_power
+        return result.available_power, result.source
 
     def _can_recover_from_autolimit(self) -> bool:
         """Return True when autolimit can be probed without command loops."""
@@ -637,15 +636,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     def _get_battery_reserve_power(self) -> float:
         """Return how much battery charge power should be reserved for home storage."""
-        if self._battery_soc is None:
-            return self._battery_max_charge_power
-        if self._battery_soc >= 95:
-            return 0
-        if self._battery_soc >= self._soc_high:
-            return self._high_reserve_power
-        if self._battery_soc >= self._soc_mid:
-            return self._mid_reserve_power
-        return self._battery_max_charge_power
+        return get_battery_reserve_power(
+            self._battery_soc,
+            self._battery_max_charge_power,
+            self._soc_mid,
+            self._soc_high,
+            self._mid_reserve_power,
+            self._high_reserve_power,
+        )
 
     def _apply_current_optimizations(
         self,
@@ -938,6 +936,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             current_limit_reason=current_limit_reason,
             decision_reason=decision_reason,
         )
+        state.decision_summary = describe_solar_balance_state(state)
         self._entry_data.solar_balance_states[self._port] = state
         async_dispatcher_send(
             self.hass,

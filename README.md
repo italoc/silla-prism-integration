@@ -25,6 +25,8 @@ home-battery priority.
 - [Solar Balancing Options](#solar-balancing-options)
 - [Diagnostic Sensors](#diagnostic-sensors)
 - [Prism Entities](#prism-entities)
+- [Testing](#testing)
+- [Troubleshooting And Releases](#troubleshooting-and-releases)
 
 ## Main Features
 
@@ -279,6 +281,7 @@ on multi-port devices Home Assistant adds the port number.
 | `silla_prism_solar_balance_unused_export_power` | Unused export power | Export still available beyond target export and deadband. |
 | `silla_prism_solar_balance_residual_export_countdown` | Residual export countdown | Seconds remaining before unused export can trigger current recovery. |
 | `silla_prism_solar_balance_decision_reason` | Decision reason | Current reason for the controller decision. |
+| `silla_prism_solar_balance_decision_summary` | Decision summary | Human-readable explanation of the latest balancing decision. |
 
 These sensors are the best place to understand why the controller is holding,
 raising or lowering current.
@@ -317,3 +320,20 @@ entities.
 | `silla_prism_powerwall_solar` | Sensor | Legacy Powerwall-compatible PV power sensor, when Powerwall sensors are enabled | W |
 | `silla_prism_powerwall_house` | Sensor | Legacy Powerwall-compatible house power sensor, when Powerwall sensors are enabled | W |
 | `silla_prism_solar_battery_balance` | Switch | Enable or disable automatic solar battery balancing, when configured | on/off |
+
+## Testing
+
+Pure solar balancing helpers are covered by unit tests that do not require a
+running Home Assistant instance:
+
+```bash
+python3 -m unittest discover
+```
+
+## Troubleshooting And Releases
+
+For common balancing cases, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+For release notes, see [CHANGELOG.md](CHANGELOG.md). Tags and manifest versions
+use normal three-part semantic versions such as `0.9.11`; avoid four-part
+versions because HACS may not order them as expected.

@@ -361,8 +361,11 @@ class PrismSolarBalanceSensor(SensorEntity):
             self._attr_native_value = state.residual_export_remaining or 0
         elif self.entity_description.value_key == "decision_reason":
             self._attr_native_value = state.decision_reason
+        elif self.entity_description.value_key == "decision_summary":
+            self._attr_native_value = state.decision_summary
 
         self._attr_extra_state_attributes = {
+            "decision_summary": state.decision_summary,
             "available_power": state.available_power,
             "target_power": state.target_power,
             "start_delay_remaining": state.start_delay_remaining,
@@ -555,6 +558,12 @@ SOLAR_BALANCE_SENSORS: tuple[PrismSolarBalanceSensorEntityDescription, ...] = (
         has_entity_name=True,
         translation_key="solar_balance_decision_reason",
         value_key="decision_reason",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_decision_summary_{}",
+        has_entity_name=True,
+        translation_key="solar_balance_decision_summary",
+        value_key="decision_summary",
     ),
 )
 

@@ -244,6 +244,9 @@
                     "charging_surplus": "Charging from surplus",
                     "low_surplus_keep_charging": "Low surplus, keeping charge at 6A"
                 }
+            },
+            "solar_balance_decision_summary": {
+                "name": "Decision summary"
             }
         },
         "button": {
