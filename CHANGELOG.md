@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.13
+
+- Translated the solar balance decision summary sensor value when Home Assistant
+  is configured in Italian.
+
 ## 0.9.12
 
 - Added a human-readable solar balance decision summary sensor.

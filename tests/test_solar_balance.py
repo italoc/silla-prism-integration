@@ -151,6 +151,19 @@ class SolarBalanceHelperTest(TestCase):
 
         self.assertIn("explicit Home Assistant current override", summary)
 
+    def test_decision_summary_uses_italian_when_requested(self) -> None:
+        summary = describe_solar_balance_state(
+            SolarBalanceState(
+                available_power=-755,
+                target_current=6,
+                current_limit_reason="low_surplus_hold_6a",
+            ),
+            "it",
+        )
+
+        self.assertIn("Mantengo 6A", summary)
+        self.assertIn("surplus calcolato", summary)
+
     def test_decision_summary_handles_disabled_and_waiting_data(self) -> None:
         self.assertEqual(
             describe_solar_balance_state(

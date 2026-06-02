@@ -936,7 +936,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             current_limit_reason=current_limit_reason,
             decision_reason=decision_reason,
         )
-        state.decision_summary = describe_solar_balance_state(state)
+        state.decision_summary = describe_solar_balance_state(
+            state, self.hass.config.language
+        )
         self._entry_data.solar_balance_states[self._port] = state
         async_dispatcher_send(
             self.hass,

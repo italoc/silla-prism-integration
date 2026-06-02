@@ -160,19 +160,83 @@ def calculate_available_power(
     )
 
 
-def describe_solar_balance_state(state: SolarBalanceState) -> str:
+def describe_solar_balance_state(
+    state: SolarBalanceState, language: str | None = None
+) -> str:
     """Return a concise human-readable explanation for the latest decision."""
     reason = state.current_limit_reason or state.decision_reason or state.status
+    is_italian = (language or "").lower().startswith("it")
     target = (
         f"{state.target_current:g}A"
         if isinstance(state.target_current, (int, float))
-        else "no current"
+        else ("nessuna corrente" if is_italian else "no current")
     )
     available = (
         f"{state.available_power:.0f}W"
         if isinstance(state.available_power, (int, float))
-        else "unknown surplus"
+        else ("surplus sconosciuto" if is_italian else "unknown surplus")
     )
+
+    if is_italian:
+        if reason == "manual_current_override":
+            return (
+                f"Mantengo {target}: e attiva una modifica manuale della corrente "
+                "da Home Assistant."
+            )
+        if reason == "low_surplus_hold_6a":
+            return f"Mantengo 6A: il surplus calcolato e basso ({available})."
+        if reason == "residual_export_recovery":
+            return (
+                f"Salgo a {target}: l'esportazione residua e rimasta disponibile "
+                "abbastanza a lungo."
+            )
+        if reason == "battery_charge_target":
+            return (
+                f"Salgo a {target}: la batteria sta caricando oltre la riserva "
+                "configurata."
+            )
+        if reason == "deadband_hold":
+            return (
+                f"Mantengo {target}: import/export dalla rete e dentro la banda morta."
+            )
+        if reason == "waiting_stable_surplus":
+            remaining = state.start_delay_remaining or 0
+            return (
+                f"Attendo {remaining}s: il surplus deve restare stabile prima "
+                "di aumentare."
+            )
+        if reason == "autolimit_low_surplus":
+            return (
+                "Attendo: l'autolimit Prism e attivo e l'import dalla rete e "
+                "ancora troppo alto."
+            )
+        if reason == "autolimit_recovery_6a":
+            return (
+                "Provo il recupero a 6A: l'autolimit Prism e rientrato nella "
+                "banda morta."
+            )
+        if reason == "external_pause":
+            return (
+                "Pausa da Prism o app: l'integrazione non riavvia la carica "
+                "automaticamente."
+            )
+        if reason == "ramp_up_wait":
+            return (
+                f"Mantengo {target}: attendo il prossimo intervallo consentito "
+                "per aumentare."
+            )
+        if reason in ("ramp_up_limited", "ramp_down_limited"):
+            return (
+                f"Mi sposto a {target}: il limite di rampa sta rendendo graduale "
+                "la variazione."
+            )
+        if state.status == SOLAR_BALANCE_CHARGING_SURPLUS:
+            return f"Carico a {target}: surplus disponibile ({available})."
+        if state.status == SOLAR_BALANCE_DISABLED:
+            return "Bilanciamento solare disattivato."
+        if state.status == SOLAR_BALANCE_WAITING_DATA:
+            return "In attesa dei dati necessari dai sensori."
+        return f"Decisione: {reason or state.status}."
 
     if reason == "manual_current_override":
         return f"Holding {target}: explicit Home Assistant current override is active."
