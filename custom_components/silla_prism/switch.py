@@ -422,9 +422,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         battery_power = battery_breakdown.normalized_power
         battery_charge_power = battery_breakdown.charge_power
         battery_discharge_power = battery_breakdown.discharge_power
+        battery_reserve_shortfall_power = max(
+            battery_reserve_power - battery_charge_power, 0
+        )
         battery_power_to_exclude = battery_breakdown.power_to_exclude
         available_power, surplus_source = self._get_available_power(
-            battery_breakdown.charge_available_above_reserve, battery_power_to_exclude
+            battery_breakdown.charge_available_above_reserve,
+            battery_reserve_shortfall_power,
+            battery_power_to_exclude,
         )
         # Target power keeps a small export buffer so noisy measurements do not
         # accidentally pull from the grid while the EV current ramps.
@@ -453,6 +458,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
+                battery_reserve_shortfall_power,
                 surplus_source=surplus_source,
                 raw_target_current=theoretical_target_current,
                 target_current=0,
@@ -483,6 +489,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                         battery_discharge_power,
                         battery_power_to_exclude,
                         battery_reserve_power,
+                        battery_reserve_shortfall_power,
                         surplus_source=surplus_source,
                         raw_target_current=surplus_current,
                         target_current=MIN_CHARGE_CURRENT,
@@ -506,6 +513,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     battery_discharge_power,
                     battery_power_to_exclude,
                     battery_reserve_power,
+                    battery_reserve_shortfall_power,
                     surplus_source=surplus_source,
                     raw_target_current=0,
                     target_current=0,
@@ -550,6 +558,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
+                battery_reserve_shortfall_power,
                 surplus_source=surplus_source,
                 raw_target_current=self._raw_target_current,
                 target_current=target_current,
@@ -587,6 +596,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 battery_discharge_power,
                 battery_power_to_exclude,
                 battery_reserve_power,
+                battery_reserve_shortfall_power,
                 surplus_source=surplus_source,
                 raw_target_current=self._raw_target_current,
                 target_current=preview_current,
@@ -610,6 +620,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             battery_discharge_power,
             battery_power_to_exclude,
             battery_reserve_power,
+            battery_reserve_shortfall_power,
             surplus_source=surplus_source,
             raw_target_current=self._raw_target_current,
             target_current=target_current,
@@ -626,13 +637,17 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return self._charging_from_surplus or self._ev_power >= min_power * 0.5
 
     def _get_available_power(
-        self, battery_charge_available: float, battery_power_to_exclude: float
+        self,
+        battery_charge_available: float,
+        battery_reserve_shortfall: float,
+        battery_power_to_exclude: float,
     ) -> tuple[float, str]:
         """Return EV surplus power and the source used to calculate it."""
         result = calculate_available_power(
             ev_power=self._ev_power,
             grid_power=self._grid_power,
             battery_charge_available=battery_charge_available,
+            battery_reserve_shortfall=battery_reserve_shortfall,
             battery_power_to_exclude=battery_power_to_exclude,
             use_battery_charge=self._use_battery_charge,
             solar_power=(
@@ -959,6 +974,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         battery_discharge_power: float | None = None,
         battery_power_used: float | None = None,
         battery_reserve_power: float | None = None,
+        battery_reserve_shortfall_power: float | None = None,
         surplus_source: str | None = None,
         raw_target_current: float | None = None,
         target_current: float | None = None,
@@ -988,6 +1004,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             battery_max_charge_power=self._battery_max_charge_power,
             battery_soc=self._battery_soc,
             battery_reserve_power=battery_reserve_power,
+            battery_reserve_shortfall_power=battery_reserve_shortfall_power,
             surplus_source=surplus_source,
             target_export_power=self._target_export_power,
             deadband_power=self._deadband_power,

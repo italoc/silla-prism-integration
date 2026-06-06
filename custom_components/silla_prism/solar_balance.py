@@ -44,6 +44,7 @@ class SolarBalanceState:
     battery_max_charge_power: float | None = None
     battery_soc: float | None = None
     battery_reserve_power: float | None = None
+    battery_reserve_shortfall_power: float | None = None
     surplus_source: str | None = None
     target_export_power: float | None = None
     deadband_power: float | None = None
@@ -136,6 +137,7 @@ def calculate_available_power(
     ev_power: float,
     grid_power: float,
     battery_charge_available: float,
+    battery_reserve_shortfall: float,
     battery_power_to_exclude: float,
     use_battery_charge: bool,
     solar_power: float | None = None,
@@ -148,7 +150,11 @@ def calculate_available_power(
         effective_home_load = max(home_load_power, 0)
         if home_load_includes_ev:
             effective_home_load = max(effective_home_load - ev_power, 0)
-        available_power = solar_production - effective_home_load
+        available_power = (
+            solar_production
+            - effective_home_load
+            - max(battery_reserve_shortfall, 0)
+        )
         if use_battery_charge and available_power > 0:
             available_power += battery_charge_available
         return AvailablePowerResult(
@@ -158,7 +164,12 @@ def calculate_available_power(
         )
 
     return AvailablePowerResult(
-        available_power=ev_power - grid_power - battery_power_to_exclude,
+        available_power=(
+            ev_power
+            - grid_power
+            - battery_power_to_exclude
+            - max(battery_reserve_shortfall, 0)
+        ),
         source=SURPLUS_SOURCE_PRISM_GRID_BATTERY,
         effective_home_load_power=None,
     )

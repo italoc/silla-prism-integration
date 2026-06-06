@@ -53,6 +53,7 @@ class SolarBalanceHelperTest(TestCase):
             ev_power=2600,
             grid_power=0,
             battery_charge_available=0,
+            battery_reserve_shortfall=0,
             battery_power_to_exclude=0,
             use_battery_charge=False,
             solar_power=1300,
@@ -69,6 +70,7 @@ class SolarBalanceHelperTest(TestCase):
             ev_power=2660,
             grid_power=-3,
             battery_charge_available=0,
+            battery_reserve_shortfall=0,
             battery_power_to_exclude=3607,
             use_battery_charge=True,
             solar_power=0,
@@ -84,6 +86,7 @@ class SolarBalanceHelperTest(TestCase):
             ev_power=0,
             grid_power=0,
             battery_charge_available=0,
+            battery_reserve_shortfall=0,
             battery_power_to_exclude=0,
             use_battery_charge=False,
             solar_power=-1200,
@@ -98,12 +101,28 @@ class SolarBalanceHelperTest(TestCase):
             ev_power=2000,
             grid_power=300,
             battery_charge_available=0,
+            battery_reserve_shortfall=0,
             battery_power_to_exclude=600,
             use_battery_charge=False,
         )
 
         self.assertEqual(result.source, SURPLUS_SOURCE_PRISM_GRID_BATTERY)
         self.assertEqual(result.available_power, 1100)
+
+    def test_battery_reserve_shortfall_reduces_direct_solar_surplus(self) -> None:
+        result = calculate_available_power(
+            ev_power=1790,
+            grid_power=0,
+            battery_charge_available=0,
+            battery_reserve_shortfall=837,
+            battery_power_to_exclude=0,
+            use_battery_charge=False,
+            solar_power=2652,
+            home_load_power=534,
+        )
+
+        self.assertEqual(result.source, SURPLUS_SOURCE_SOLAR_HOME_LOAD)
+        self.assertEqual(result.available_power, 1281)
 
     def test_battery_reserve_tracks_soc_thresholds(self) -> None:
         self.assertEqual(

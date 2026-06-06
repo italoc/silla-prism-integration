@@ -231,6 +231,9 @@
             "solar_balance_battery_reserve_power": {
                 "name": "Potenza riservata alla batteria"
             },
+            "solar_balance_battery_reserve_shortfall_power": {
+                "name": "Deficit riserva batteria"
+            },
             "solar_balance_target_export_power": {
                 "name": "Potenza export target"
             },

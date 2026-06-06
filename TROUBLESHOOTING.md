@@ -50,14 +50,22 @@ would request if it were allowed to command the wallbox.
 
 Check whether `Use battery charge as surplus` is enabled. When enabled, battery
 charge power above the configured reserve can be redirected to the EV. The
-reserve is an approximate target because Prism current changes in whole amps.
+reserve is a soft priority because Prism current changes in whole amps and Type
+2 charging cannot go below 6A.
 
 Also verify:
 
 - `Battery reserve power`
+- `Battery reserve shortfall`
 - `Battery power used in calculation`
 - `Solar production used in calculation`
 - `Home load used in calculation`
+
+If `Battery reserve shortfall` is above zero, the balancer subtracts that missing
+reserve before calculating EV surplus. If there is not enough remaining power for
+the Type 2 minimum current and the battery reserve at the same time, the EV can
+only be held at the minimum current; it cannot force the inverter to send the
+full reserve to the battery.
 
 ## The calculated surplus looks wrong
 

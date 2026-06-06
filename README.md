@@ -157,7 +157,9 @@ effective_home_load = home_load
 if home_load_includes_ev:
     effective_home_load = max(home_load - ev_power, 0)
 
-available_power = solar_production - effective_home_load
+battery_reserve_shortfall = max(battery_reserve_power - battery_charge_power, 0)
+
+available_power = solar_production - effective_home_load - battery_reserve_shortfall
 
 if use_battery_charge and available_power > 0:
     available_power += max(battery_charge_power - battery_reserve_power, 0)
@@ -168,6 +170,12 @@ target_power = available_power - target_grid_export
 The external solar production sensor must be positive when PV is producing.
 Negative production values are treated as `0 W` so an inverted sensor cannot
 create false surplus.
+
+The battery reserve is a soft priority. When the battery is charging below the
+configured reserve, the missing reserve power is subtracted before current is
+given to the EV. If the remaining power is not enough for both the home battery
+reserve and the Type 2 minimum current, the EV is reduced to the minimum current
+instead of being allowed to ramp higher.
 
 Without both external solar production and external home load sensors, the
 fallback estimator is:
@@ -304,6 +312,7 @@ on multi-port devices Home Assistant adds the port number.
 | `silla_prism_solar_balance_raw_target_current` | Raw target current | Current calculated directly from surplus before stabilization. |
 | `silla_prism_solar_balance_theoretical_target_current` | Theoretical target current | Current the balancer would request if it were allowed to command the wallbox, useful while paused. |
 | `silla_prism_solar_balance_battery_reserve_power` | Battery reserve power | Home-battery charge power currently protected by SOC logic. |
+| `silla_prism_solar_balance_battery_reserve_shortfall_power` | Battery reserve shortfall | Power still missing before the home battery reaches its configured reserve. |
 | `silla_prism_solar_balance_target_export_power` | Target export power | Configured export buffer. |
 | `silla_prism_solar_balance_unused_export_power` | Unused export power | Export still available beyond target export and deadband. |
 | `silla_prism_solar_balance_residual_export_countdown` | Residual export countdown | Seconds remaining before unused export can trigger current recovery. |

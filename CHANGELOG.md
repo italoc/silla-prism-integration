@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.15
+
+- Treat home-battery reserve as a soft priority before EV surplus: when battery
+  charge power is below the configured reserve, the shortfall is subtracted from
+  available EV power.
+- Added a battery reserve shortfall diagnostic sensor.
+
 ## 0.9.14
 
 - Keep solar balance diagnostics populated while Prism is paused, including the
