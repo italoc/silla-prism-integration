@@ -33,6 +33,7 @@ from .solar_balance import (
     SOLAR_BALANCE_EXTERNAL_PAUSED,
     SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
     SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
+    SOLAR_BALANCE_WAITING_BATTERY_DATA,
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
     SOLAR_BALANCE_WAITING_DATA,
     SolarBalanceState,
@@ -53,6 +54,7 @@ MODE_PAUSED = "3"
 MODE_AUTOLIMIT = "7"
 STATE_PAUSE = "4"
 AUTOLIMIT_RECOVERY_COOLDOWN = 300
+CURRENT_REPUBLISH_INTERVAL = 15
 
 
 async def async_setup_entry(
@@ -134,6 +136,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._battery_power: float | None = None
         self._battery_soc: float | None = None
         self._last_current_command: int | None = None
+        self._reported_current_limit: int | None = None
+        self._last_current_publish: datetime | None = None
         self._last_current_increase: datetime | None = None
         self._last_mode_command: str | None = None
         self._reported_mode: str | None = None
@@ -191,6 +195,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     self.hass,
                     f"{self._base_topic}{self._port}/w",
                     self._mqtt_ev_power_received,
+                ),
+                await mqtt.async_subscribe(
+                    self.hass,
+                    f"{self._base_topic}{self._port}/pilot",
+                    self._mqtt_current_limit_received,
                 ),
                 await mqtt.async_subscribe(
                     self.hass,
@@ -304,6 +313,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self.hass.async_create_task(self._async_update_balance())
 
     @callback
+    def _mqtt_current_limit_received(self, msg) -> None:
+        current_limit = self._parse_state(msg.payload)
+        self._reported_current_limit = (
+            round(current_limit) if current_limit is not None else None
+        )
+        self.hass.async_create_task(self._async_update_balance())
+
+    @callback
     def _mqtt_grid_voltage_received(self, msg) -> None:
         self._grid_voltage = self._parse_state(msg.payload)
         self.hass.async_create_task(self._async_update_balance())
@@ -373,36 +390,24 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             )
             return
 
-        if self._is_externally_paused:
-            self._reset_start_delay()
-            self._reset_residual_export()
-            self._charging_from_surplus = False
-            self._update_solar_balance_state(
-                SOLAR_BALANCE_EXTERNAL_PAUSED,
-                0,
-                None,
-                None,
-                None,
-                battery_power=self._battery_power,
-                surplus_source="external_pause",
-                raw_target_current=0,
-                target_current=0,
-                current_limit_reason="external_pause",
-                decision_reason=SOLAR_BALANCE_EXTERNAL_PAUSED,
-            )
-            return
-
         if not self._has_required_values:
             self._reset_start_delay()
             self._reset_residual_export()
             self._charging_from_surplus = False
+            missing_data_reason = self._get_missing_data_reason()
+            status = (
+                SOLAR_BALANCE_WAITING_BATTERY_DATA
+                if missing_data_reason == "battery_power"
+                else SOLAR_BALANCE_WAITING_DATA
+            )
             self._update_solar_balance_state(
-                SOLAR_BALANCE_WAITING_DATA,
+                status,
                 None,
                 None,
                 None,
                 None,
-                decision_reason="waiting_data",
+                decision_reason=status,
+                missing_data_reason=missing_data_reason,
             )
             return
 
@@ -429,6 +434,34 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         already_charging = self._is_charging_from_surplus(min_power)
         self._reset_current_diagnostics()
 
+        theoretical_target_current = self._get_theoretical_target_current(
+            target_power, watts_per_amp, min_power
+        )
+        if self._is_externally_paused:
+            self._reset_start_delay()
+            self._reset_residual_export()
+            self._charging_from_surplus = False
+            self._track_grid_error()
+            self._update_solar_balance_state(
+                SOLAR_BALANCE_EXTERNAL_PAUSED,
+                0,
+                available_power,
+                target_power,
+                0,
+                battery_power,
+                battery_charge_power,
+                battery_discharge_power,
+                battery_power_to_exclude,
+                battery_reserve_power,
+                surplus_source=surplus_source,
+                raw_target_current=theoretical_target_current,
+                target_current=0,
+                theoretical_target_current=theoretical_target_current,
+                current_limit_reason="external_pause",
+                decision_reason=SOLAR_BALANCE_EXTERNAL_PAUSED,
+            )
+            return
+
         if target_power < min_power:
             # Type 2 charging cannot run below 6A. In low-surplus situations we
             # keep Prism in solar mode at the minimum, unless Prism itself is in
@@ -436,7 +469,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             self._reset_start_delay()
             surplus_current = max(target_power / watts_per_amp, 0)
             if self._reported_mode == MODE_AUTOLIMIT:
-                self._reset_residual_export()
                 if self._can_recover_from_autolimit():
                     self._charging_from_surplus = True
                     self._last_autolimit_recovery = datetime.now(timezone.utc)
@@ -454,6 +486,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                         surplus_source=surplus_source,
                         raw_target_current=surplus_current,
                         target_current=MIN_CHARGE_CURRENT,
+                        theoretical_target_current=MIN_CHARGE_CURRENT,
                         current_limit_reason="autolimit_recovery_6a",
                         decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
                     )
@@ -476,7 +509,12 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     surplus_source=surplus_source,
                     raw_target_current=0,
                     target_current=0,
-                    current_limit_reason="autolimit_low_surplus",
+                    theoretical_target_current=MIN_CHARGE_CURRENT,
+                    current_limit_reason=(
+                        "autolimit_wait_stable_surplus"
+                        if self._grid_power <= self._deadband_power
+                        else "autolimit_low_surplus"
+                    ),
                     decision_reason=SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
                 )
                 return
@@ -515,6 +553,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 surplus_source=surplus_source,
                 raw_target_current=self._raw_target_current,
                 target_current=target_current,
+                theoretical_target_current=target_current,
                 current_limit_reason=current_limit_reason,
                 decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
             )
@@ -551,6 +590,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 surplus_source=surplus_source,
                 raw_target_current=self._raw_target_current,
                 target_current=preview_current,
+                theoretical_target_current=target_current,
                 current_limit_reason="waiting_stable_surplus",
                 decision_reason="waiting_stable_surplus",
             )
@@ -573,6 +613,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             surplus_source=surplus_source,
             raw_target_current=self._raw_target_current,
             target_current=target_current,
+            theoretical_target_current=target_current,
             current_limit_reason=self._current_limit_reason,
             decision_reason="charging_surplus",
         )
@@ -614,7 +655,12 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         if self._grid_power is None:
             return False
 
+        self._track_grid_error()
         if self._grid_power > self._deadband_power:
+            self._reset_residual_export()
+            return False
+
+        if not self._track_residual_export():
             return False
 
         if self._last_autolimit_recovery is None:
@@ -624,6 +670,19 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             datetime.now(timezone.utc) - self._last_autolimit_recovery
         ).total_seconds()
         return elapsed >= AUTOLIMIT_RECOVERY_COOLDOWN
+
+    def _get_theoretical_target_current(
+        self, target_power: float, watts_per_amp: float, min_power: float
+    ) -> float:
+        """Return the current that would be requested if commanding were allowed."""
+        if watts_per_amp <= 0:
+            return 0
+        if target_power < min_power:
+            return MIN_CHARGE_CURRENT
+        return max(
+            MIN_CHARGE_CURRENT,
+            min(floor(target_power / watts_per_amp), self._max_current),
+        )
 
     def _get_manual_current_override(self) -> int | None:
         """Return an explicit HA current override, if the user set one."""
@@ -653,7 +712,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         battery_reserve_power: float,
     ) -> int:
         """Apply hysteresis, proportional correction and ramp limits."""
-        last_current = self._last_current_command
+        last_current = self._get_reference_current()
         if last_current is None:
             self._track_grid_error()
             self._track_residual_export()
@@ -700,7 +759,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     def _get_low_surplus_target_current(self, watts_per_amp: float) -> int:
         """Recover current from persistent export while held at the 6A minimum."""
-        last_current = self._last_current_command or MIN_CHARGE_CURRENT
+        last_current = self._get_reference_current() or MIN_CHARGE_CURRENT
         self._track_grid_error()
         if not self._track_residual_export():
             self._current_limit_reason = "target_current"
@@ -744,20 +803,25 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return target_current
 
     def _apply_residual_export_recovery(self, target_current: int) -> int:
-        if self._last_current_command is None:
+        reference_current = self._get_reference_current()
+        if reference_current is None:
             return target_current
         if not self._track_residual_export():
             return target_current
 
         recovered_current = min(
             self._max_current,
-            self._last_current_command + self._increase_step,
+            reference_current + self._increase_step,
         )
         if recovered_current > target_current:
             self._reset_residual_export()
             self._current_limit_reason = "residual_export_recovery"
             return recovered_current
         return target_current
+
+    def _get_reference_current(self) -> int | None:
+        """Return the best known wallbox current limit for ramp decisions."""
+        return self._reported_current_limit or self._last_current_command
 
     def _track_grid_error(self) -> None:
         """Update import/export diagnostics relative to the configured buffer."""
@@ -900,6 +964,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         target_current: float | None = None,
         current_limit_reason: str | None = None,
         decision_reason: str | None = None,
+        theoretical_target_current: float | None = None,
+        missing_data_reason: str | None = None,
     ) -> None:
         state = SolarBalanceState(
             status=status,
@@ -927,6 +993,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             deadband_power=self._deadband_power,
             raw_target_current=raw_target_current,
             target_current=target_current,
+            theoretical_target_current=theoretical_target_current,
+            reported_current_limit=self._reported_current_limit,
             unused_export_power=self._unused_export_power,
             excess_import_power=self._excess_import_power,
             residual_export_remaining=self._residual_export_remaining,
@@ -935,6 +1003,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             ramp_direction=self._ramp_direction,
             current_limit_reason=current_limit_reason,
             decision_reason=decision_reason,
+            missing_data_reason=missing_data_reason,
         )
         state.decision_summary = describe_solar_balance_state(
             state, self.hass.config.language
@@ -956,16 +1025,40 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     @property
     def _is_externally_paused(self) -> bool:
+        if self._last_mode_command == MODE_PAUSED and (
+            self._reported_mode == MODE_PAUSED
+            or self._reported_state in (STATE_PAUSE, "pause")
+        ):
+            return False
         return self._reported_mode == MODE_PAUSED or self._reported_state in (
             STATE_PAUSE,
             "pause",
         )
 
+    def _get_missing_data_reason(self) -> str:
+        if self._grid_power is None:
+            return "grid_power"
+        if self._ev_power is None:
+            return "ev_power"
+        if self._battery_power is None:
+            return "battery_power"
+        return "unknown"
+
     async def _async_publish_current(self, current: int) -> None:
         self._entry_data.solar_balance_manual_current_overrides.pop(self._port, None)
-        if self._last_current_command == current:
+        now = datetime.now(timezone.utc)
+        recently_published = (
+            self._last_current_publish is not None
+            and (now - self._last_current_publish).total_seconds()
+            < CURRENT_REPUBLISH_INTERVAL
+        )
+        if (
+            self._last_current_command == current
+            and (self._reported_current_limit == current or recently_published)
+        ):
             return
         self._last_current_command = current
+        self._last_current_publish = now
         await mqtt.async_publish(
             self.hass,
             f"{self._base_topic}{self._port}/command/set_current_limit",

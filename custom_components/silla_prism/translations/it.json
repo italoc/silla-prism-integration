@@ -106,6 +106,9 @@
             "set_current_limit": {
                 "name": "Limite corrente"
             },
+            "solar_balance_manual_current_override": {
+                "name": "Override corrente bilanciamento solare"
+            },
             "set_max_current": {
                 "name": "Corrente utente"
             }
@@ -187,6 +190,7 @@
                 "state": {
                     "disabled": "Disabilitato",
                     "waiting_data": "In attesa dei dati",
+                    "waiting_battery_data": "In attesa dato batteria",
                     "waiting_stable_surplus": "In attesa di surplus stabile",
                     "paused_low_surplus": "In pausa per surplus basso",
                     "external_paused": "In pausa dalla wallbox",
@@ -221,6 +225,9 @@
             "solar_balance_raw_target_current": {
                 "name": "Corrente target grezza"
             },
+            "solar_balance_theoretical_target_current": {
+                "name": "Corrente target teorica"
+            },
             "solar_balance_battery_reserve_power": {
                 "name": "Potenza riservata alla batteria"
             },
@@ -238,6 +245,7 @@
                 "state": {
                     "disabled": "Disabilitato",
                     "waiting_data": "In attesa dei dati",
+                    "waiting_battery_data": "In attesa dato batteria",
                     "waiting_stable_surplus": "In attesa di surplus stabile",
                     "paused_low_surplus": "In pausa per surplus basso",
                     "external_paused": "In pausa dalla wallbox",

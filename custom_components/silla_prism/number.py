@@ -22,6 +22,9 @@ from .entry_data import RuntimeEntryData
 
 _LOGGER = logging.getLogger(__name__)
 
+MIN_CHARGE_CURRENT = 6
+SOLAR_BALANCE_MANUAL_CURRENT_OVERRIDE = "solar_balance_manual_current_override"
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -68,11 +71,16 @@ class PrismNumber(PrismBaseEntity, NumberEntity):
             return PrismNumberEntityDescription(
                 key=description.key.format(port),
                 topic=description.topic.format(port),
-                topic_out=description.topic_out.format(port),
+                topic_out=(
+                    description.topic_out.format(port)
+                    if description.topic_out
+                    else None
+                ),
                 entity_category=description.entity_category,
                 device_class=description.device_class,
                 native_min_value=description.native_min_value,
                 native_max_value=max_current,
+                native_step=description.native_step,
                 mode=description.mode,
                 has_entity_name=description.has_entity_name,
                 translation_key=description.translation_key,
@@ -80,11 +88,14 @@ class PrismNumber(PrismBaseEntity, NumberEntity):
         return PrismNumberEntityDescription(
             key=description.key[:-3],
             topic=description.topic.format(port),
-            topic_out=description.topic_out.format(port),
+            topic_out=(
+                description.topic_out.format(port) if description.topic_out else None
+            ),
             entity_category=description.entity_category,
             device_class=description.device_class,
             native_min_value=description.native_min_value,
             native_max_value=max_current,
+            native_step=description.native_step,
             mode=description.mode,
             has_entity_name=description.has_entity_name,
             translation_key=description.translation_key,
@@ -114,7 +125,11 @@ class PrismNumber(PrismBaseEntity, NumberEntity):
             device,
         )
 
-        self._topic_out = entry_data.topic + _description.topic_out
+        self._topic_out = (
+            entry_data.topic + _description.topic_out
+            if _description.topic_out
+            else None
+        )
         self._attr_native_value = self.native_min_value
 
     @override
@@ -125,7 +140,8 @@ class PrismNumber(PrismBaseEntity, NumberEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to mqtt."""
-        await self._subscribe_topic()
+        if self.entity_description.topic:
+            await self._subscribe_topic()
 
     async def async_will_remove_from_hass(self) -> None:
         """Unsubscribe from mqtt."""
@@ -145,11 +161,21 @@ class PrismNumber(PrismBaseEntity, NumberEntity):
         #     self._topic_out,
         #     value,
         # )
-        if self.entity_description.translation_key == "set_current_limit":
-            self._entry_data.solar_balance_manual_current_overrides[self._port] = int(
-                value
-            )
-        await mqtt.async_publish(self.hass, self._topic_out, int(value))
+        int_value = int(value)
+        if self.entity_description.translation_key == SOLAR_BALANCE_MANUAL_CURRENT_OVERRIDE:
+            if int_value >= MIN_CHARGE_CURRENT:
+                self._entry_data.solar_balance_manual_current_overrides[
+                    self._port
+                ] = int_value
+            else:
+                self._entry_data.solar_balance_manual_current_overrides.pop(
+                    self._port, None
+                )
+            self._attr_native_value = int_value
+            self.async_write_ha_state()
+            return
+
+        await mqtt.async_publish(self.hass, self._topic_out, int_value)
 
 
 NUMBERS: tuple[PrismNumberEntityDescription, ...] = (
@@ -175,5 +201,18 @@ NUMBERS: tuple[PrismNumberEntityDescription, ...] = (
         native_max_value=16,
         has_entity_name=True,
         translation_key="set_current_limit",
+    ),
+    PrismNumberEntityDescription(
+        key="solar_balance_manual_current_override_{}",
+        topic="",
+        topic_out=None,
+        entity_category=EntityCategory.CONFIG,
+        device_class=NumberDeviceClass.CURRENT,
+        native_min_value=0,
+        native_max_value=16,
+        native_step=1,
+        mode=NumberMode.SLIDER,
+        has_entity_name=True,
+        translation_key=SOLAR_BALANCE_MANUAL_CURRENT_OVERRIDE,
     ),
 )

@@ -8,6 +8,7 @@ from .const import DOMAIN
 
 SOLAR_BALANCE_DISABLED = "disabled"
 SOLAR_BALANCE_WAITING_DATA = "waiting_data"
+SOLAR_BALANCE_WAITING_BATTERY_DATA = "waiting_battery_data"
 SOLAR_BALANCE_WAITING_STABLE_SURPLUS = "waiting_stable_surplus"
 SOLAR_BALANCE_PAUSED_LOW_SURPLUS = "paused_low_surplus"
 SOLAR_BALANCE_EXTERNAL_PAUSED = "external_paused"
@@ -48,6 +49,8 @@ class SolarBalanceState:
     deadband_power: float | None = None
     raw_target_current: float | None = None
     target_current: float | None = None
+    theoretical_target_current: float | None = None
+    reported_current_limit: float | None = None
     unused_export_power: float | None = None
     excess_import_power: float | None = None
     residual_export_remaining: int | None = None
@@ -57,6 +60,7 @@ class SolarBalanceState:
     current_limit_reason: str | None = None
     decision_reason: str | None = None
     decision_summary: str | None = None
+    missing_data_reason: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -140,7 +144,7 @@ def calculate_available_power(
 ) -> AvailablePowerResult:
     """Return EV surplus power from direct sensors or Prism fallback data."""
     if solar_power is not None and home_load_power is not None:
-        solar_production = abs(solar_power)
+        solar_production = max(solar_power, 0)
         effective_home_load = max(home_load_power, 0)
         if home_load_includes_ev:
             effective_home_load = max(effective_home_load - ev_power, 0)
@@ -178,10 +182,20 @@ def describe_solar_balance_state(
     )
 
     if is_italian:
+        if (
+            reason in ("low_surplus_hold_6a", "target_current")
+            and isinstance(state.target_current, (int, float))
+            and isinstance(state.reported_current_limit, (int, float))
+            and round(state.reported_current_limit) != round(state.target_current)
+        ):
+            return (
+                f"Richiedo {target}: Prism riporta ancora pilot "
+                f"{state.reported_current_limit:g}A."
+            )
         if reason == "manual_current_override":
             return (
-                f"Mantengo {target}: e attiva una modifica manuale della corrente "
-                "da Home Assistant."
+                f"Mantengo {target}: e attivo l'override manuale del "
+                "bilanciamento solare."
             )
         if reason == "low_surplus_hold_6a":
             return f"Mantengo 6A: il surplus calcolato e basso ({available})."
@@ -210,12 +224,23 @@ def describe_solar_balance_state(
                 "Attendo: l'autolimit Prism e attivo e l'import dalla rete e "
                 "ancora troppo alto."
             )
+        if reason == "autolimit_wait_stable_surplus":
+            remaining = state.residual_export_remaining or 0
+            return (
+                f"Attendo {remaining}s: l'autolimit Prism e attivo e serve "
+                "export stabile prima del recupero."
+            )
         if reason == "autolimit_recovery_6a":
             return (
                 "Provo il recupero a 6A: l'autolimit Prism e rientrato nella "
                 "banda morta."
             )
         if reason == "external_pause":
+            if isinstance(state.theoretical_target_current, (int, float)):
+                return (
+                    "Pausa da Prism o app: non comando la wallbox. "
+                    f"Target teorico {state.theoretical_target_current:g}A."
+                )
             return (
                 "Pausa da Prism o app: l'integrazione non riavvia la carica "
                 "automaticamente."
@@ -235,11 +260,25 @@ def describe_solar_balance_state(
         if state.status == SOLAR_BALANCE_DISABLED:
             return "Bilanciamento solare disattivato."
         if state.status == SOLAR_BALANCE_WAITING_DATA:
+            if state.missing_data_reason:
+                return f"In attesa dei dati necessari: {state.missing_data_reason}."
             return "In attesa dei dati necessari dai sensori."
+        if state.status == SOLAR_BALANCE_WAITING_BATTERY_DATA:
+            return "In attesa del dato potenza batteria."
         return f"Decisione: {reason or state.status}."
 
+    if (
+        reason in ("low_surplus_hold_6a", "target_current")
+        and isinstance(state.target_current, (int, float))
+        and isinstance(state.reported_current_limit, (int, float))
+        and round(state.reported_current_limit) != round(state.target_current)
+    ):
+        return (
+            f"Requesting {target}: Prism is still reporting pilot "
+            f"{state.reported_current_limit:g}A."
+        )
     if reason == "manual_current_override":
-        return f"Holding {target}: explicit Home Assistant current override is active."
+        return f"Holding {target}: the solar balance manual current override is active."
     if reason == "low_surplus_hold_6a":
         return f"Holding 6A: calculated surplus is low ({available})."
     if reason == "residual_export_recovery":
@@ -253,9 +292,20 @@ def describe_solar_balance_state(
         return f"Waiting {remaining}s: surplus must stay stable before increasing."
     if reason == "autolimit_low_surplus":
         return "Waiting: Prism autolimit is active and grid import is still too high."
+    if reason == "autolimit_wait_stable_surplus":
+        remaining = state.residual_export_remaining or 0
+        return (
+            f"Waiting {remaining}s: Prism autolimit is active and stable export "
+            "is required before recovery."
+        )
     if reason == "autolimit_recovery_6a":
         return "Trying 6A recovery: Prism autolimit cleared inside the deadband."
     if reason == "external_pause":
+        if isinstance(state.theoretical_target_current, (int, float)):
+            return (
+                "Paused by Prism or app: the integration will not command the "
+                f"wallbox. Theoretical target {state.theoretical_target_current:g}A."
+            )
         return "Paused by Prism or app: the integration will not resume automatically."
     if reason == "ramp_up_wait":
         return f"Holding {target}: waiting for the next allowed ramp-up interval."
@@ -266,7 +316,11 @@ def describe_solar_balance_state(
     if state.status == SOLAR_BALANCE_DISABLED:
         return "Solar balancing is disabled."
     if state.status == SOLAR_BALANCE_WAITING_DATA:
+        if state.missing_data_reason:
+            return f"Waiting for required sensor data: {state.missing_data_reason}."
         return "Waiting for required sensor data."
+    if state.status == SOLAR_BALANCE_WAITING_BATTERY_DATA:
+        return "Waiting for battery power data."
     return f"Decision: {reason or state.status}."
 
 

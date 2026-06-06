@@ -43,6 +43,8 @@ home-battery priority.
   residual export recovery.
 - Autolimit-aware recovery and explicit pause handling, so the integration does
   not fight wallbox protection states or user/app pauses.
+- Pause diagnostics continue to calculate the theoretical target current without
+  sending commands to the wallbox.
 - Diagnostic sensors that explain the latest balancing decision.
 
 ## Installation
@@ -163,6 +165,10 @@ if use_battery_charge and available_power > 0:
 target_power = available_power - target_grid_export
 ```
 
+The external solar production sensor must be positive when PV is producing.
+Negative production values are treated as `0 W` so an inverted sensor cannot
+create false surplus.
+
 Without both external solar production and external home load sensors, the
 fallback estimator is:
 
@@ -215,21 +221,24 @@ To avoid loops and oscillation, the controller applies several guards:
 | Residual export recovery | Adds current when export remains unused long enough. |
 
 Low surplus is handled without stopping solar charging: if target power is below
-the Type 2 minimum, Prism is kept in solar mode at `6A`. If the user manually
-changes the `Current limit` number from Home Assistant, the integration
-preserves that manual limit while low surplus remains. The live Prism `pilot`
-value is not treated as a manual override because it also follows the current
-requested by the car. If there is persistent real grid export, residual export
-recovery can raise current above `6A` after the configured delay.
+the Type 2 minimum, Prism is kept in solar mode at `6A`. To force a manual value
+inside the balancer, set `Solar balance manual current` to `6A` or higher. Set it
+back to `0` to return to automatic control. `Current limit` remains a direct
+Prism command and is not treated as a solar-balancer override. The live Prism
+`pilot` value is also not treated as a manual override because it follows the
+current requested by the car. If there is persistent real grid export, residual
+export recovery can raise current above `6A` after the configured delay.
 
 Autolimit and pause are intentionally different:
 
 - `autolimit`: treated as wallbox protection. The integration does not force
   solar mode while grid import is above the deadband. When import returns inside
-  the deadband, it makes one `6A` recovery attempt and then waits 5 minutes
-  before trying again.
+  the deadband, residual export must stay stable before one `6A` recovery
+  attempt is made. Another attempt is blocked for 5 minutes.
 - `paused`: treated as a deliberate wallbox/app pause, for example a charge
-  limit reached. The integration does not resume charging automatically.
+  limit reached. The integration keeps diagnostics updated, including the
+  theoretical current it would request, but does not resume charging
+  automatically.
 
 ## Solar Balancing Options
 
@@ -258,6 +267,23 @@ Autolimit and pause are intentionally different:
 | Residual export for current recovery | Extra export required before adding current beyond the rounded calculation. Default is `400 W`. |
 | Residual export time before recovery | Seconds residual export must stay above threshold before recovery. Default is `60`. |
 
+## Manual Current Override
+
+`Solar balance manual current` is a dedicated number for the balancing algorithm:
+
+- `0`: automatic balancing; the controller decides current.
+- `6A` or higher: the balancer keeps that current during low-surplus solar
+  charging instead of publishing its own calculated low-surplus value.
+
+Use `Current limit` only when you want to send a direct current command to Prism.
+Changing `Current limit` or receiving a new Prism `pilot` value does not enable
+the solar balance manual override.
+
+When the controller requests one current but Prism still reports a different
+`pilot` value, `Decision summary` reports the mismatch explicitly. This separates
+the current requested by the balancer from the limit currently reported by Prism
+and from the real delivered current.
+
 ## Diagnostic Sensors
 
 When solar balancing is enabled, the integration exposes diagnostic entities for
@@ -276,12 +302,13 @@ on multi-port devices Home Assistant adds the port number.
 | `silla_prism_solar_balance_home_load_power` | Home load used in calculation | Latest house load value used by the algorithm, corrected for EV power when configured. |
 | `silla_prism_solar_balance_target_current` | Calculated target current | Final current after deadband, ramp and recovery limits. |
 | `silla_prism_solar_balance_raw_target_current` | Raw target current | Current calculated directly from surplus before stabilization. |
+| `silla_prism_solar_balance_theoretical_target_current` | Theoretical target current | Current the balancer would request if it were allowed to command the wallbox, useful while paused. |
 | `silla_prism_solar_balance_battery_reserve_power` | Battery reserve power | Home-battery charge power currently protected by SOC logic. |
 | `silla_prism_solar_balance_target_export_power` | Target export power | Configured export buffer. |
 | `silla_prism_solar_balance_unused_export_power` | Unused export power | Export still available beyond target export and deadband. |
 | `silla_prism_solar_balance_residual_export_countdown` | Residual export countdown | Seconds remaining before unused export can trigger current recovery. |
 | `silla_prism_solar_balance_decision_reason` | Decision reason | Current reason for the controller decision. |
-| `silla_prism_solar_balance_decision_summary` | Decision summary | Human-readable explanation of the latest balancing decision. |
+| `silla_prism_solar_balance_decision_summary` | Decision summary | Human-readable explanation of the latest balancing decision, including Prism `pilot` mismatch when present. |
 
 These sensors are the best place to understand why the controller is holding,
 raising or lowering current.
@@ -310,6 +337,7 @@ entities.
 | `silla_prism_core_temperature` | Sensor | Prism CPU temperature | °C |
 | `silla_prism_set_max_current` | Number | Set user current limit | A |
 | `silla_prism_set_current_limit` | Number | Set active current limit | A |
+| `silla_prism_solar_balance_manual_current_override` | Number | Manual current used only by the solar balancer; `0` means automatic | A |
 | `silla_prism_set_mode` | Select | Set current port mode | `solar`, `normal`, `paused` |
 | `silla_prism_set_mode_traps_auth` | Button | Authorize charging | command |
 | `silla_prism_set_mode_traps_noauth` | Button | Revoke charging authorization | command |

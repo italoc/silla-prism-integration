@@ -38,6 +38,7 @@ from .solar_balance import (
     SOLAR_BALANCE_EXTERNAL_PAUSED,
     SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
     SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
+    SOLAR_BALANCE_WAITING_BATTERY_DATA,
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
     SOLAR_BALANCE_WAITING_DATA,
     SolarBalanceState,
@@ -351,6 +352,8 @@ class PrismSolarBalanceSensor(SensorEntity):
             self._attr_native_value = state.target_current
         elif self.entity_description.value_key == "raw_target_current":
             self._attr_native_value = state.raw_target_current
+        elif self.entity_description.value_key == "theoretical_target_current":
+            self._attr_native_value = state.theoretical_target_current
         elif self.entity_description.value_key == "battery_reserve_power":
             self._attr_native_value = state.battery_reserve_power
         elif self.entity_description.value_key == "target_export_power":
@@ -385,6 +388,8 @@ class PrismSolarBalanceSensor(SensorEntity):
             "deadband_power": state.deadband_power,
             "raw_target_current": state.raw_target_current,
             "target_current": state.target_current,
+            "theoretical_target_current": state.theoretical_target_current,
+            "reported_current_limit": state.reported_current_limit,
             "unused_export_power": state.unused_export_power,
             "excess_import_power": state.excess_import_power,
             "residual_export_remaining": state.residual_export_remaining,
@@ -393,6 +398,7 @@ class PrismSolarBalanceSensor(SensorEntity):
             "ramp_direction": state.ramp_direction,
             "current_limit_reason": state.current_limit_reason,
             "decision_reason": state.decision_reason,
+            "missing_data_reason": state.missing_data_reason,
         }
 
 
@@ -403,6 +409,7 @@ SOLAR_BALANCE_SENSORS: tuple[PrismSolarBalanceSensorEntityDescription, ...] = (
         options=[
             SOLAR_BALANCE_DISABLED,
             SOLAR_BALANCE_WAITING_DATA,
+            SOLAR_BALANCE_WAITING_BATTERY_DATA,
             SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
             SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
             SOLAR_BALANCE_EXTERNAL_PAUSED,
@@ -504,6 +511,16 @@ SOLAR_BALANCE_SENSORS: tuple[PrismSolarBalanceSensorEntityDescription, ...] = (
         value_key="raw_target_current",
     ),
     PrismSolarBalanceSensorEntityDescription(
+        key="solar_balance_theoretical_target_current_{}",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=1,
+        has_entity_name=True,
+        translation_key="solar_balance_theoretical_target_current",
+        value_key="theoretical_target_current",
+    ),
+    PrismSolarBalanceSensorEntityDescription(
         key="solar_balance_battery_reserve_power_{}",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -549,6 +566,7 @@ SOLAR_BALANCE_SENSORS: tuple[PrismSolarBalanceSensorEntityDescription, ...] = (
         options=[
             SOLAR_BALANCE_DISABLED,
             SOLAR_BALANCE_WAITING_DATA,
+            SOLAR_BALANCE_WAITING_BATTERY_DATA,
             SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
             SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
             SOLAR_BALANCE_EXTERNAL_PAUSED,

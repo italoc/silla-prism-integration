@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.9.14
+
+- Keep solar balance diagnostics populated while Prism is paused, including the
+  theoretical current the balancer would request if commanding were allowed.
+- Added a theoretical target current diagnostic sensor.
+- Treat negative external solar production values as zero production instead of
+  converting them to positive surplus.
+- Require stable residual export before autolimit recovery attempts.
+- Report missing battery power data as a specific waiting state.
+- Added a dedicated solar balance manual current number. `Current limit` now
+  remains a direct Prism command and no longer enables the balancer override.
+- The solar balancer now tracks the live Prism `pilot` current and republishes
+  the calculated target if Prism reports a different limit than the last
+  controller command.
+- Decision summaries now call out when the controller is requesting one current
+  but Prism is still reporting a different `pilot` value.
+
 ## 0.9.13
 
 - Translated the solar balance decision summary sensor value when Home Assistant

@@ -33,6 +33,8 @@ solar_balance = load_module(
 
 SOLAR_BALANCE_CHARGING_SURPLUS = solar_balance.SOLAR_BALANCE_CHARGING_SURPLUS
 SOLAR_BALANCE_DISABLED = solar_balance.SOLAR_BALANCE_DISABLED
+SOLAR_BALANCE_EXTERNAL_PAUSED = solar_balance.SOLAR_BALANCE_EXTERNAL_PAUSED
+SOLAR_BALANCE_WAITING_BATTERY_DATA = solar_balance.SOLAR_BALANCE_WAITING_BATTERY_DATA
 SOLAR_BALANCE_WAITING_DATA = solar_balance.SOLAR_BALANCE_WAITING_DATA
 SURPLUS_SOURCE_PRISM_GRID_BATTERY = solar_balance.SURPLUS_SOURCE_PRISM_GRID_BATTERY
 SURPLUS_SOURCE_SOLAR_HOME_LOAD = solar_balance.SURPLUS_SOURCE_SOLAR_HOME_LOAD
@@ -76,6 +78,20 @@ class SolarBalanceHelperTest(TestCase):
 
         self.assertEqual(result.source, SURPLUS_SOURCE_SOLAR_HOME_LOAD)
         self.assertEqual(result.available_power, -755)
+
+    def test_negative_solar_sensor_is_not_treated_as_production(self) -> None:
+        result = calculate_available_power(
+            ev_power=0,
+            grid_power=0,
+            battery_charge_available=0,
+            battery_power_to_exclude=0,
+            use_battery_charge=False,
+            solar_power=-1200,
+            home_load_power=400,
+        )
+
+        self.assertEqual(result.source, SURPLUS_SOURCE_SOLAR_HOME_LOAD)
+        self.assertEqual(result.available_power, -400)
 
     def test_fallback_subtracts_grid_import_and_battery_discharge(self) -> None:
         result = calculate_available_power(
@@ -149,7 +165,7 @@ class SolarBalanceHelperTest(TestCase):
             )
         )
 
-        self.assertIn("explicit Home Assistant current override", summary)
+        self.assertIn("solar balance manual current override", summary)
 
     def test_decision_summary_uses_italian_when_requested(self) -> None:
         summary = describe_solar_balance_state(
@@ -164,6 +180,17 @@ class SolarBalanceHelperTest(TestCase):
         self.assertIn("Mantengo 6A", summary)
         self.assertIn("surplus calcolato", summary)
 
+    def test_decision_summary_reports_theoretical_pause_target(self) -> None:
+        summary = describe_solar_balance_state(
+            SolarBalanceState(
+                status=SOLAR_BALANCE_EXTERNAL_PAUSED,
+                current_limit_reason="external_pause",
+                theoretical_target_current=10,
+            )
+        )
+
+        self.assertIn("Theoretical target 10A", summary)
+
     def test_decision_summary_handles_disabled_and_waiting_data(self) -> None:
         self.assertEqual(
             describe_solar_balance_state(
@@ -176,4 +203,10 @@ class SolarBalanceHelperTest(TestCase):
                 SolarBalanceState(status=SOLAR_BALANCE_WAITING_DATA)
             ),
             "Waiting for required sensor data.",
+        )
+        self.assertEqual(
+            describe_solar_balance_state(
+                SolarBalanceState(status=SOLAR_BALANCE_WAITING_BATTERY_DATA)
+            ),
+            "Waiting for battery power data.",
         )

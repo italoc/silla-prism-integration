@@ -8,18 +8,25 @@ from expected.
 Check `Decision summary` and `Decision reason`.
 
 - If the reason is `manual_current_override`, the current was explicitly changed
-  through the Home Assistant `Current limit` number. Toggle the solar balancing
-  switch or let the balancer publish a new current to clear the override.
+  through the Home Assistant `Solar balance manual current` number. Set that
+  number back to `0` to return to automatic balancing.
+- `Current limit` is a direct Prism command. Changing it does not enable the
+  solar balance manual override.
 - The Prism `pilot` value is not treated as a manual override. It follows the
   current requested by the car and should not keep the balancer above 6A.
+- If `Decision summary` says the controller is requesting 6A while Prism still
+  reports a higher `pilot`, the integration has sent the lower command but Prism
+  has not confirmed it yet. Check delivered current and output power to see
+  whether the car is actually charging above 6A.
 - If `Unused export power` is above the configured residual export threshold for
   long enough, residual export recovery can raise current above 6A.
 
 ## The wallbox is in autolimit and does not restart
 
 Autolimit is treated as Prism protection. The integration waits while grid
-import is above the deadband. When import returns inside the deadband, it makes
-one 6A recovery attempt, then waits 5 minutes before another attempt.
+import is above the deadband. When import returns inside the deadband, unused
+export must stay stable for the configured residual export delay before one 6A
+recovery attempt is made. Another attempt is blocked for 5 minutes.
 
 Useful sensors:
 
@@ -34,6 +41,10 @@ Paused mode is considered deliberate. The integration does not resume charging
 automatically when Prism reports paused mode or pause state. Change the Prism
 mode back to solar/normal or toggle the balancing switch when you want the
 balancer to take over again.
+
+While paused, diagnostics continue to calculate surplus and the theoretical
+target current. Check `Theoretical target current` to see what the balancer
+would request if it were allowed to command the wallbox.
 
 ## The EV receives more power than direct solar production
 
@@ -53,6 +64,12 @@ Also verify:
 Prefer external Home Assistant sensors for real PV production and house load.
 Prism `energy_data/power_solar` and `energy_data/power_house` can stay at `0`
 on some installations and are not used for the direct calculation.
+
+The solar production sensor must be positive when producing. Negative values are
+treated as zero production to avoid false surplus from inverted sensors.
+
+If the battery power sensor is unavailable, the balancer reports
+`waiting_battery_data` instead of a generic waiting state.
 
 If the house load sensor includes the EV charger, enable `Home load sensor
 includes EV charger`. The balancer then subtracts live Prism EV output power
