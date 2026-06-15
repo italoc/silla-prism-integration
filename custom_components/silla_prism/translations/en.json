@@ -119,7 +119,8 @@
                 "state": {
                     "solar": "Solar",
                     "normal": "Normal",
-                    "paused": "Paused"
+                    "paused": "Paused",
+                    "hybrid": "Hybrid"
                 }
             }
         },
@@ -138,6 +139,7 @@
                     "solar": "Solar",
                     "normal": "Normal",
                     "paused": "Paused",
+                    "hybrid": "Hybrid",
                     "suspended": "Suspended",
                     "unknown": "Unknown",
                     "autolimit": "Auto limit"

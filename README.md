@@ -341,13 +341,13 @@ entities.
 | `silla_prism_session_output_energy` | Sensor | Energy delivered during the current session | Wh |
 | `silla_prism_total_output_energy` | Sensor | Total delivered energy | Wh |
 | `silla_prism_error` | Binary sensor | Error status | on/off |
-| `silla_prism_current_port_mode` | Sensor | Current port mode reported by Prism | `solar`, `normal`, `paused`, `suspended`, `unknown`, `autolimit` |
+| `silla_prism_current_port_mode` | Sensor | Current port mode reported by Prism | `solar`, `normal`, `paused`, `hybrid`, `suspended`, `unknown`, `autolimit` |
 | `silla_prism_input_grid_power` | Sensor | Input power from grid | W |
 | `silla_prism_core_temperature` | Sensor | Prism CPU temperature | °C |
 | `silla_prism_set_max_current` | Number | Set user current limit | A |
 | `silla_prism_set_current_limit` | Number | Set active current limit | A |
 | `silla_prism_solar_balance_manual_current_override` | Number | Manual current used only by the solar balancer; `0` means automatic | A |
-| `silla_prism_set_mode` | Select | Set current port mode | `solar`, `normal`, `paused` |
+| `silla_prism_set_mode` | Select | Set current port mode | `solar`, `normal`, `paused`, `hybrid` |
 | `silla_prism_set_mode_traps_auth` | Button | Authorize charging | command |
 | `silla_prism_set_mode_traps_noauth` | Button | Revoke charging authorization | command |
 | `silla_prism_touch_sigle` | Binary sensor | Single touch gesture pulse | on/off |

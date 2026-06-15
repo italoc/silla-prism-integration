@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.16
+
+- Added upstream Prism `hybrid` mode support to the mode select, current port
+  mode sensor, translations and documentation.
+
 ## 0.9.15
 
 - Treat home-battery reserve as a soft priority before EV surplus: when battery
