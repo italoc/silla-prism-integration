@@ -1,0 +1,78 @@
+title: Silla Prism Solar Diagnostics
+views:
+  - title: Solar Balance
+    path: silla-prism-solar-balance
+    icon: mdi:ev-station
+    cards:
+      - type: entities
+        title: Decision
+        show_header_toggle: false
+        entities:
+          - entity: switch.silla_prism_solar_battery_balance
+            name: Solar balancing
+          - entity: sensor.silla_prism_solar_balance_status
+            name: Status
+          - entity: sensor.silla_prism_solar_balance_decision_reason
+            name: Reason
+          - entity: sensor.silla_prism_solar_balance_decision_summary
+            name: Summary
+          - entity: sensor.silla_prism_current_port_mode
+            name: Prism mode
+          - entity: sensor.silla_prism_current_state
+            name: Wallbox state
+
+      - type: entities
+        title: Current
+        show_header_toggle: false
+        entities:
+          - entity: sensor.silla_prism_solar_balance_target_current
+            name: Target current
+          - entity: sensor.silla_prism_solar_balance_raw_target_current
+            name: Raw target current
+          - entity: sensor.silla_prism_solar_balance_theoretical_target_current
+            name: Theoretical target current
+          - entity: number.silla_prism_solar_balance_manual_current_override
+            name: Manual solar override
+          - entity: number.silla_prism_set_current_limit
+            name: Direct Prism current limit
+          - entity: sensor.silla_prism_output_car_current
+            name: Car requested current
+
+      - type: entities
+        title: Power Calculation
+        show_header_toggle: false
+        entities:
+          - entity: sensor.silla_prism_solar_balance_available_power
+            name: Calculated surplus
+          - entity: sensor.silla_prism_solar_balance_solar_power
+            name: Solar production used
+          - entity: sensor.silla_prism_solar_balance_home_load_power
+            name: Home load used
+          - entity: sensor.silla_prism_solar_balance_grid_power
+            name: Grid power used
+          - entity: sensor.silla_prism_output_power
+            name: EV output power
+          - entity: sensor.silla_prism_solar_balance_battery_power_used
+            name: Battery power used
+
+      - type: entities
+        title: Battery Priority
+        show_header_toggle: false
+        entities:
+          - entity: sensor.silla_prism_solar_balance_battery_reserve_power
+            name: Battery reserve
+          - entity: sensor.silla_prism_solar_balance_battery_reserve_shortfall_power
+            name: Battery reserve shortfall
+          - entity: sensor.silla_prism_solar_balance_target_export_power
+            name: Target grid export
+          - entity: sensor.silla_prism_solar_balance_unused_export_power
+            name: Unused export
+
+      - type: entities
+        title: Timers
+        show_header_toggle: false
+        entities:
+          - entity: sensor.silla_prism_solar_balance_start_countdown
+            name: Stable surplus countdown
+          - entity: sensor.silla_prism_solar_balance_residual_export_countdown
+            name: Residual export countdown

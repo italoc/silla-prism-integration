@@ -175,6 +175,7 @@ class SolarBalanceHelperTest(TestCase):
 
         self.assertIn("Holding 6A", summary)
         self.assertIn("-755W", summary)
+        self.assertIn("Constraint", summary)
 
     def test_decision_summary_explains_manual_override(self) -> None:
         summary = describe_solar_balance_state(
@@ -198,6 +199,34 @@ class SolarBalanceHelperTest(TestCase):
 
         self.assertIn("Mantengo 6A", summary)
         self.assertIn("surplus calcolato", summary)
+        self.assertIn("Vincolo", summary)
+
+    def test_decision_summary_explains_dry_run(self) -> None:
+        summary = describe_solar_balance_state(
+            SolarBalanceState(
+                status=SOLAR_BALANCE_CHARGING_SURPLUS,
+                available_power=2800,
+                target_current=12,
+                current_limit_reason="target_current",
+                dry_run=True,
+            )
+        )
+
+        self.assertIn("Dry run", summary)
+        self.assertIn("would request 12A", summary)
+        self.assertIn("no MQTT command is sent", summary)
+
+    def test_decision_summary_reports_next_stable_surplus_release(self) -> None:
+        summary = describe_solar_balance_state(
+            SolarBalanceState(
+                target_current=6,
+                start_delay_remaining=42,
+                current_limit_reason="waiting_stable_surplus",
+            )
+        )
+
+        self.assertIn("Waiting 42s", summary)
+        self.assertIn("Next release in 42s", summary)
 
     def test_decision_summary_reports_theoretical_pause_target(self) -> None:
         summary = describe_solar_balance_state(

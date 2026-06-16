@@ -40,6 +40,8 @@ Start from these pages:
   residual export recovery.
 - Autolimit-aware recovery and explicit pause handling.
 - Diagnostic sensors that explain the latest balancing decision.
+- Dry-run mode to test the balancing algorithm without sending MQTT commands to
+  Prism.
 
 ## Quick Install
 
@@ -86,5 +88,6 @@ python3 -m unittest discover
 ## Links
 
 - [Wiki](https://github.com/italoc/silla-prism-integration/wiki)
+- [Solar balance diagnostic dashboard](docs/lovelace-solar-balance-diagnostics.yaml)
 - [Changelog](CHANGELOG.md)
 - [Prism MQTT manual](https://support.silla.industries/wp-content/uploads/2023/09/DOC-Prism_MQTT_Manual-rel.2.0_rev.-20220105-EN.pdf)

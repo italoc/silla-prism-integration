@@ -43,7 +43,8 @@
                     "solar_balance_increase_step": "Maximum current increase step (A)",
                     "solar_balance_decrease_step": "Maximum current decrease step (A)",
                     "solar_balance_residual_export_power": "Residual export for current recovery (W)",
-                    "solar_balance_residual_export_delay": "Residual export time before recovery (s)"
+                    "solar_balance_residual_export_delay": "Residual export time before recovery (s)",
+                    "solar_balance_dry_run": "Solar balance dry run"
                 },
                 "data_description": {
                     "topic": "Base MQTT topic configured on Prism. Example: prism/ with the trailing slash.",
@@ -73,7 +74,8 @@
                     "solar_balance_increase_step": "Maximum amps added at each increase. Example: 1A is conservative.",
                     "solar_balance_decrease_step": "Maximum amps removed at each correction. Example: 3A reacts faster to house loads.",
                     "solar_balance_residual_export_power": "Extra export that must remain unused before recovering current. Example: 400 W.",
-                    "solar_balance_residual_export_delay": "Seconds residual export must stay stable before adding current. Example: 60."
+                    "solar_balance_residual_export_delay": "Seconds residual export must stay stable before adding current. Example: 60.",
+                    "solar_balance_dry_run": "Calculate the solar balancing decision and update diagnostics without sending current or mode MQTT commands to Prism."
                 },
                 "description": "Please enter connection settings of your device",
                 "title": "Configure Silla Prsim Integration"

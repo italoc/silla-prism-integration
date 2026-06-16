@@ -39,6 +39,7 @@ from .const import (
     CONF_SOLAR_BALANCE_INCREASE_INTERVAL,
     CONF_SOLAR_BALANCE_INCREASE_STEP,
     CONF_SOLAR_BALANCE_DECREASE_STEP,
+    CONF_SOLAR_BALANCE_DRY_RUN,
     CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
     CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
     CONF_SOLAR_BATTERY_BALANCE,
@@ -67,6 +68,7 @@ from .const import (
     DEFAULT_SOLAR_BALANCE_INCREASE_INTERVAL,
     DEFAULT_SOLAR_BALANCE_INCREASE_STEP,
     DEFAULT_SOLAR_BALANCE_DECREASE_STEP,
+    DEFAULT_SOLAR_BALANCE_DRY_RUN,
     DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
     DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
     DEFAULT_SOLAR_BATTERY_BALANCE,
@@ -168,6 +170,10 @@ SILLA_PRISM_SCHEMA = vol.Schema(
             CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
             default=DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
         ): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
+        vol.Optional(
+            CONF_SOLAR_BALANCE_DRY_RUN,
+            default=DEFAULT_SOLAR_BALANCE_DRY_RUN,
+        ): cv.boolean,
     }
 )
 
@@ -224,6 +230,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         self._solar_balance_residual_export_delay: int = (
             DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY
         )
+        self._solar_balance_dry_run: bool = DEFAULT_SOLAR_BALANCE_DRY_RUN
 
     async def fetch_device_info(self) -> str | None:
         """Fetech information from MQTT."""
@@ -355,6 +362,10 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
         self._solar_balance_residual_export_delay = user_input.get(
             CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
             DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
+        )
+        self._solar_balance_dry_run = user_input.get(
+            CONF_SOLAR_BALANCE_DRY_RUN,
+            DEFAULT_SOLAR_BALANCE_DRY_RUN,
         )
         if self._solar_balance_soc_mid > self._solar_balance_soc_high:
             (
@@ -557,6 +568,13 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
                                 DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
                             ),
                         ): vol.All(vol.Coerce(int), vol.Range(min=0, max=600)),
+                        vol.Optional(
+                            CONF_SOLAR_BALANCE_DRY_RUN,
+                            default=entry.data.get(
+                                CONF_SOLAR_BALANCE_DRY_RUN,
+                                DEFAULT_SOLAR_BALANCE_DRY_RUN,
+                            ),
+                        ): cv.boolean,
                     }
                 ),
                 errors=errors,
@@ -642,6 +660,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY: (
                 self._solar_balance_residual_export_delay
             ),
+            CONF_SOLAR_BALANCE_DRY_RUN: self._solar_balance_dry_run,
         }
         return self.async_create_entry(
             title="SillaPrism",
@@ -694,6 +713,7 @@ class SillaPrismConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY: (
                 self._solar_balance_residual_export_delay
             ),
+            CONF_SOLAR_BALANCE_DRY_RUN: self._solar_balance_dry_run,
         }
         return self.async_update_reload_and_abort(
             self._get_reconfigure_entry(),

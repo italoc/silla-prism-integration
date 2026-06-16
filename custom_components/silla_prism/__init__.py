@@ -34,6 +34,7 @@ from .const import (
     CONF_SOLAR_BALANCE_INCREASE_INTERVAL,
     CONF_SOLAR_BALANCE_INCREASE_STEP,
     CONF_SOLAR_BALANCE_DECREASE_STEP,
+    CONF_SOLAR_BALANCE_DRY_RUN,
     CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
     CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
     CONF_SOLAR_BATTERY_BALANCE,
@@ -62,6 +63,7 @@ from .const import (
     DEFAULT_SOLAR_BALANCE_INCREASE_INTERVAL,
     DEFAULT_SOLAR_BALANCE_INCREASE_STEP,
     DEFAULT_SOLAR_BALANCE_DECREASE_STEP,
+    DEFAULT_SOLAR_BALANCE_DRY_RUN,
     DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_POWER,
     DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
     DEFAULT_SOLAR_BATTERY_BALANCE,
@@ -184,6 +186,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
         DEFAULT_SOLAR_BALANCE_RESIDUAL_EXPORT_DELAY,
     )
+    _solar_balance_dry_run = entry.data.get(
+        CONF_SOLAR_BALANCE_DRY_RUN,
+        DEFAULT_SOLAR_BALANCE_DRY_RUN,
+    )
     domain_data = DomainData.get(hass)
 
     _devices_info = []
@@ -239,6 +245,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         solar_balance_decrease_step=_solar_balance_decrease_step,
         solar_balance_residual_export_power=_solar_balance_residual_export_power,
         solar_balance_residual_export_delay=_solar_balance_residual_export_delay,
+        solar_balance_dry_run=_solar_balance_dry_run,
         devices=_devices_info,
     )
     domain_data.set_entry_data(entry, entry_data)

@@ -117,6 +117,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._decrease_step = entry_data.solar_balance_decrease_step
         self._residual_export_power = entry_data.solar_balance_residual_export_power
         self._residual_export_delay = entry_data.solar_balance_residual_export_delay
+        self._dry_run = entry_data.solar_balance_dry_run
         self._max_current = entry_data.maxcurr
         self._attr_device_info = self._get_device(entry_data, port)
         self.entity_description = self._get_description(
@@ -1021,6 +1022,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             current_limit_reason=current_limit_reason,
             decision_reason=decision_reason,
             missing_data_reason=missing_data_reason,
+            dry_run=self._dry_run,
         )
         state.decision_summary = describe_solar_balance_state(
             state, self.hass.config.language
@@ -1074,6 +1076,15 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             and (self._reported_current_limit == current or recently_published)
         ):
             return
+        if self._dry_run:
+            self._last_current_command = current
+            self._last_current_publish = now
+            _LOGGER.info(
+                "Solar balance dry run: would publish current %sA to Prism port %s",
+                current,
+                self._port,
+            )
+            return
         self._last_current_command = current
         self._last_current_publish = now
         await mqtt.async_publish(
@@ -1084,6 +1095,14 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     async def _async_publish_mode(self, mode: str) -> None:
         if self._last_mode_command == mode and self._reported_mode in (None, mode):
+            return
+        if self._dry_run:
+            self._last_mode_command = mode
+            _LOGGER.info(
+                "Solar balance dry run: would publish mode %s to Prism port %s",
+                mode,
+                self._port,
+            )
             return
         self._last_mode_command = mode
         await mqtt.async_publish(

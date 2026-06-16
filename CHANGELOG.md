@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.17
+
+- Added solar balance dry-run mode. When enabled, the integration calculates the
+  target current and updates diagnostics without sending MQTT current or mode
+  commands to Prism.
+- Expanded the decision summary with the dominant constraint or next release
+  condition for common balancing decisions.
+- Added a ready-to-copy Lovelace diagnostic dashboard for the solar balancer.
+
 ## 0.9.16
 
 - Added upstream Prism `hybrid` mode support to the mode select, current port

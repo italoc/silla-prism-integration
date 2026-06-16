@@ -43,7 +43,8 @@
                     "solar_balance_increase_step": "Step massimo aumento corrente (A)",
                     "solar_balance_decrease_step": "Step massimo riduzione corrente (A)",
                     "solar_balance_residual_export_power": "Export residuo per recupero corrente (W)",
-                    "solar_balance_residual_export_delay": "Tempo export residuo prima del recupero (s)"
+                    "solar_balance_residual_export_delay": "Tempo export residuo prima del recupero (s)",
+                    "solar_balance_dry_run": "Simulazione bilanciamento solare"
                 },
                 "data_description": {
                     "topic": "Topic MQTT base configurato su Prism. Esempio: prism/ con slash finale.",
@@ -73,7 +74,8 @@
                     "solar_balance_increase_step": "Ampere massimi aggiunti a ogni aumento. Esempio: 1A e' prudente.",
                     "solar_balance_decrease_step": "Ampere massimi tolti a ogni correzione. Esempio: 3A reagisce piu' velocemente ai carichi di casa.",
                     "solar_balance_residual_export_power": "Export extra che deve restare inutilizzato prima di recuperare corrente. Esempio: 400 W.",
-                    "solar_balance_residual_export_delay": "Secondi per cui l'export residuo deve rimanere stabile prima di aggiungere corrente. Esempio: 60."
+                    "solar_balance_residual_export_delay": "Secondi per cui l'export residuo deve rimanere stabile prima di aggiungere corrente. Esempio: 60.",
+                    "solar_balance_dry_run": "Calcola la decisione del bilanciamento e aggiorna la diagnostica senza inviare comandi MQTT di corrente o modalita a Prism."
                 },
                 "description": "Inserire i dettagli della connessione al dispositivo",
                 "title": "Configurazione Silla Prsim"

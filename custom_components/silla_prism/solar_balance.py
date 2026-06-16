@@ -62,6 +62,7 @@ class SolarBalanceState:
     decision_reason: str | None = None
     decision_summary: str | None = None
     missing_data_reason: str | None = None
+    dry_run: bool = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -191,8 +192,14 @@ def describe_solar_balance_state(
         if isinstance(state.available_power, (int, float))
         else ("surplus sconosciuto" if is_italian else "unknown surplus")
     )
+    context = _describe_decision_context(state, is_italian)
 
     if is_italian:
+        if state.dry_run and isinstance(state.target_current, (int, float)):
+            return (
+                f"Simulazione: comanderei {target} in modalita solare, "
+                f"ma non invio MQTT. {context}"
+            ).strip()
         if (
             reason in ("low_surplus_hold_6a", "target_current")
             and isinstance(state.target_current, (int, float))
@@ -204,31 +211,39 @@ def describe_solar_balance_state(
                 f"{state.reported_current_limit:g}A."
             )
         if reason == "manual_current_override":
-            return (
+            return _with_context(
                 f"Mantengo {target}: e attivo l'override manuale del "
-                "bilanciamento solare."
+                "bilanciamento solare.",
+                context,
             )
         if reason == "low_surplus_hold_6a":
-            return f"Mantengo 6A: il surplus calcolato e basso ({available})."
+            return _with_context(
+                f"Mantengo 6A: il surplus calcolato e basso ({available}).",
+                context,
+            )
         if reason == "residual_export_recovery":
-            return (
+            return _with_context(
                 f"Salgo a {target}: l'esportazione residua e rimasta disponibile "
-                "abbastanza a lungo."
+                "abbastanza a lungo.",
+                context,
             )
         if reason == "battery_charge_target":
-            return (
+            return _with_context(
                 f"Salgo a {target}: la batteria sta caricando oltre la riserva "
-                "configurata."
+                "configurata.",
+                context,
             )
         if reason == "deadband_hold":
-            return (
-                f"Mantengo {target}: import/export dalla rete e dentro la banda morta."
+            return _with_context(
+                f"Mantengo {target}: import/export dalla rete e dentro la banda morta.",
+                context,
             )
         if reason == "waiting_stable_surplus":
             remaining = state.start_delay_remaining or 0
-            return (
+            return _with_context(
                 f"Attendo {remaining}s: il surplus deve restare stabile prima "
-                "di aumentare."
+                "di aumentare.",
+                context,
             )
         if reason == "autolimit_low_surplus":
             return (
@@ -257,17 +272,22 @@ def describe_solar_balance_state(
                 "automaticamente."
             )
         if reason == "ramp_up_wait":
-            return (
+            return _with_context(
                 f"Mantengo {target}: attendo il prossimo intervallo consentito "
-                "per aumentare."
+                "per aumentare.",
+                context,
             )
         if reason in ("ramp_up_limited", "ramp_down_limited"):
-            return (
+            return _with_context(
                 f"Mi sposto a {target}: il limite di rampa sta rendendo graduale "
-                "la variazione."
+                "la variazione.",
+                context,
             )
         if state.status == SOLAR_BALANCE_CHARGING_SURPLUS:
-            return f"Carico a {target}: surplus disponibile ({available})."
+            return _with_context(
+                f"Carico a {target}: surplus disponibile ({available}).",
+                context,
+            )
         if state.status == SOLAR_BALANCE_DISABLED:
             return "Bilanciamento solare disattivato."
         if state.status == SOLAR_BALANCE_WAITING_DATA:
@@ -278,6 +298,11 @@ def describe_solar_balance_state(
             return "In attesa del dato potenza batteria."
         return f"Decisione: {reason or state.status}."
 
+    if state.dry_run and isinstance(state.target_current, (int, float)):
+        return (
+            f"Dry run: would request {target} and solar mode, but no MQTT "
+            f"command is sent. {context}"
+        ).strip()
     if (
         reason in ("low_surplus_hold_6a", "target_current")
         and isinstance(state.target_current, (int, float))
@@ -289,18 +314,36 @@ def describe_solar_balance_state(
             f"{state.reported_current_limit:g}A."
         )
     if reason == "manual_current_override":
-        return f"Holding {target}: the solar balance manual current override is active."
+        return _with_context(
+            f"Holding {target}: the solar balance manual current override is active.",
+            context,
+        )
     if reason == "low_surplus_hold_6a":
-        return f"Holding 6A: calculated surplus is low ({available})."
+        return _with_context(
+            f"Holding 6A: calculated surplus is low ({available}).",
+            context,
+        )
     if reason == "residual_export_recovery":
-        return f"Raising to {target}: residual export stayed available long enough."
+        return _with_context(
+            f"Raising to {target}: residual export stayed available long enough.",
+            context,
+        )
     if reason == "battery_charge_target":
-        return f"Raising to {target}: battery is charging above the configured reserve."
+        return _with_context(
+            f"Raising to {target}: battery is charging above the configured reserve.",
+            context,
+        )
     if reason == "deadband_hold":
-        return f"Holding {target}: grid import/export is inside the deadband."
+        return _with_context(
+            f"Holding {target}: grid import/export is inside the deadband.",
+            context,
+        )
     if reason == "waiting_stable_surplus":
         remaining = state.start_delay_remaining or 0
-        return f"Waiting {remaining}s: surplus must stay stable before increasing."
+        return _with_context(
+            f"Waiting {remaining}s: surplus must stay stable before increasing.",
+            context,
+        )
     if reason == "autolimit_low_surplus":
         return "Waiting: Prism autolimit is active and grid import is still too high."
     if reason == "autolimit_wait_stable_surplus":
@@ -319,11 +362,20 @@ def describe_solar_balance_state(
             )
         return "Paused by Prism or app: the integration will not resume automatically."
     if reason == "ramp_up_wait":
-        return f"Holding {target}: waiting for the next allowed ramp-up interval."
+        return _with_context(
+            f"Holding {target}: waiting for the next allowed ramp-up interval.",
+            context,
+        )
     if reason in ("ramp_up_limited", "ramp_down_limited"):
-        return f"Moving to {target}: ramp limit is smoothing the current change."
+        return _with_context(
+            f"Moving to {target}: ramp limit is smoothing the current change.",
+            context,
+        )
     if state.status == SOLAR_BALANCE_CHARGING_SURPLUS:
-        return f"Charging at {target}: surplus is available ({available})."
+        return _with_context(
+            f"Charging at {target}: surplus is available ({available}).",
+            context,
+        )
     if state.status == SOLAR_BALANCE_DISABLED:
         return "Solar balancing is disabled."
     if state.status == SOLAR_BALANCE_WAITING_DATA:
@@ -333,6 +385,92 @@ def describe_solar_balance_state(
     if state.status == SOLAR_BALANCE_WAITING_BATTERY_DATA:
         return "Waiting for battery power data."
     return f"Decision: {reason or state.status}."
+
+
+def _describe_decision_context(state: SolarBalanceState, is_italian: bool) -> str:
+    """Return the dominant constraint and next release condition."""
+    if state.missing_data_reason:
+        if is_italian:
+            return f"Vincolo: manca {state.missing_data_reason}."
+        return f"Constraint: missing {state.missing_data_reason}."
+
+    if state.current_limit_reason == "waiting_stable_surplus":
+        remaining = state.start_delay_remaining or 0
+        if is_italian:
+            return f"Vincolo: surplus non ancora stabile. Prossimo sblocco tra {remaining}s."
+        return f"Constraint: surplus is not stable yet. Next release in {remaining}s."
+
+    if state.current_limit_reason == "ramp_up_wait":
+        if is_italian:
+            return "Vincolo: intervallo minimo tra aumenti corrente."
+        return "Constraint: minimum current increase interval."
+
+    if state.current_limit_reason in ("ramp_up_limited", "ramp_down_limited"):
+        if is_italian:
+            return "Vincolo: limite di rampa per evitare oscillazioni."
+        return "Constraint: ramp limit is smoothing the current change."
+
+    if state.current_limit_reason == "deadband_hold":
+        if is_italian:
+            return "Vincolo: rete dentro la banda morta."
+        return "Constraint: grid import/export is inside the deadband."
+
+    if state.current_limit_reason == "battery_charge_target":
+        reserve = _format_watts(state.battery_reserve_power, is_italian)
+        charge = _format_watts(state.battery_charge_power, is_italian)
+        if is_italian:
+            return f"Vincolo: batteria sopra la riserva ({charge} > {reserve})."
+        return f"Constraint: battery charge is above reserve ({charge} > {reserve})."
+
+    if state.current_limit_reason == "residual_export_recovery":
+        export = _format_watts(state.unused_export_power, is_italian)
+        if is_italian:
+            return f"Vincolo: export residuo disponibile ({export})."
+        return f"Constraint: residual export is available ({export})."
+
+    if state.current_limit_reason == "manual_current_override":
+        if is_italian:
+            return "Vincolo: override manuale del bilanciamento solare."
+        return "Constraint: solar balance manual current override."
+
+    if state.decision_reason == SOLAR_BALANCE_EXTERNAL_PAUSED:
+        if is_italian:
+            return "Vincolo: pausa comandata da Prism o app."
+        return "Constraint: Prism or app pause."
+
+    if state.current_limit_reason == "low_surplus_hold_6a":
+        available = _format_watts(state.available_power, is_italian)
+        if is_italian:
+            return f"Vincolo: surplus sotto il minimo Type 2 ({available})."
+        return f"Constraint: surplus is below the Type 2 minimum ({available})."
+
+    if state.battery_reserve_shortfall_power and state.battery_reserve_shortfall_power > 0:
+        shortfall = _format_watts(state.battery_reserve_shortfall_power, is_italian)
+        if is_italian:
+            return f"Vincolo: mancano {shortfall} alla riserva batteria."
+        return f"Constraint: battery reserve is short by {shortfall}."
+
+    if isinstance(state.available_power, (int, float)):
+        available = _format_watts(state.available_power, is_italian)
+        if is_italian:
+            return f"Surplus calcolato: {available}."
+        return f"Calculated surplus: {available}."
+
+    return ""
+
+
+def _with_context(message: str, context: str) -> str:
+    """Append diagnostic context when available."""
+    if not context:
+        return message
+    return f"{message} {context}"
+
+
+def _format_watts(value: float | None, is_italian: bool) -> str:
+    """Format power for diagnostic summaries."""
+    if not isinstance(value, (int, float)):
+        return "sconosciuto" if is_italian else "unknown"
+    return f"{value:.0f}W"
 
 
 def get_solar_balance_signal(serial: str, port: int) -> str:
