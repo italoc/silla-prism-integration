@@ -503,8 +503,13 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     return
 
                 self._charging_from_surplus = False
+                autolimit_reason = (
+                    "autolimit_wait_stable_surplus"
+                    if self._unused_export_power >= self._residual_export_power
+                    else "autolimit_low_surplus"
+                )
                 self._update_solar_balance_state(
-                    SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
+                    SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
                     0,
                     available_power,
                     target_power,
@@ -519,12 +524,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                     raw_target_current=0,
                     target_current=0,
                     theoretical_target_current=MIN_CHARGE_CURRENT,
-                    current_limit_reason=(
-                        "autolimit_wait_stable_surplus"
-                        if self._grid_power <= self._deadband_power
-                        else "autolimit_low_surplus"
-                    ),
-                    decision_reason=SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
+                    current_limit_reason=autolimit_reason,
+                    decision_reason=autolimit_reason,
                 )
                 return
 
@@ -1044,6 +1045,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     @property
     def _is_externally_paused(self) -> bool:
+        if self._reported_mode == MODE_AUTOLIMIT:
+            return False
         if self._last_mode_command == MODE_PAUSED and (
             self._reported_mode == MODE_PAUSED
             or self._reported_state in (STATE_PAUSE, "pause")
