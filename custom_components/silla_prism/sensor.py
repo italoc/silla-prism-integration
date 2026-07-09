@@ -698,7 +698,6 @@ SENSORS: tuple[PrismSensorEntityDescription, ...] = (
             "hybrid",
             "suspended",
             "unknown",
-            "unknown",
             "autolimit",
         ],
         has_entity_name=True,

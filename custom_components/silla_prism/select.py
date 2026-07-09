@@ -111,10 +111,6 @@ class PrismSelect(PrismBaseEntity, SelectEntity):
             )
             return
 
-        # FIXME: this is a hack to fix the autolimit mode. To be implemented in a better way
-        # If mode is autolimit, set to pause
-        if _sel == 6:
-            _sel = 2
         # Update state if value is valid and different from current option
         if (
             0 <= _sel < len(self.options)
