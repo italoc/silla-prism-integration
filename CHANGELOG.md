@@ -2,11 +2,16 @@
 
 ## 0.9.22
 
-- Removed the solar balance manual current override. When Prism is in solar mode
-  and the solar balancer is enabled, the balancer always wins and republishes its
-  calculated `Current limit` target.
-- Updated the solar balance troubleshooting notes and diagnostics diagram to
-  show that manual `Current limit` changes are overridden by the balancer.
+- Changed solar balancing ownership: when Prism is in solar mode and the solar
+  balancer is enabled, the balancer always owns `Current limit`.
+- Removed the dedicated solar balance manual current override number. Manual
+  changes to Prism `Current limit` are now treated as direct Prism commands, and
+  the next balancer cycle republishes the calculated target.
+- Kept normal and hybrid modes manual: the solar balancer waits when Prism is
+  not in solar mode or Prism autolimit, so it no longer switches normal/hybrid
+  back to solar.
+- Updated troubleshooting notes, the Lovelace diagnostics example and the
+  solar balancer overview diagram to describe the new ownership model.
 
 ## 0.9.17
 
