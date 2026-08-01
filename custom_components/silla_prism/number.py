@@ -8,6 +8,7 @@ from homeassistant.components.number import (
     NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
+    NumberMode,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory

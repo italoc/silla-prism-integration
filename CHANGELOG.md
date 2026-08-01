@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.21
+## 0.9.22
 
 - Removed the solar balance manual current override. When Prism is in solar mode
   and the solar balancer is enabled, the balancer always wins and republishes its
