@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2026-06-02T00:00:00.000Z" agent="Codex" version="30.0.4" type="device">
+<mxfile host="app.diagrams.net" modified="2026-08-01T00:00:00.000Z" agent="Codex" version="30.0.4" type="device">
   <diagram id="solar-balancer-overview" name="Solar balancer">
     <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="900" math="0" shadow="0">
       <root>
@@ -10,7 +10,7 @@
         <mxCell id="title" value="Silla Prism Solar Balancer" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=30;fontStyle=1;fontColor=#16233A;" vertex="1" parent="1">
           <mxGeometry x="360" y="26" width="600" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="subtitle" value="Uses external energy sensors and Prism MQTT data to set EV current, while respecting wallbox protection and explicit user overrides." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=15;fontColor=#5D6B82;" vertex="1" parent="1">
+        <mxCell id="subtitle" value="Uses external energy sensors and Prism MQTT data to set EV current. In solar mode, the balancer owns the current limit." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=15;fontColor=#5D6B82;" vertex="1" parent="1">
           <mxGeometry x="210" y="72" width="900" height="28" as="geometry"/>
         </mxCell>
 
@@ -29,7 +29,7 @@
         <mxCell id="inputPrism" value="🔌&lt;br&gt;&lt;b&gt;Prism MQTT data&lt;/b&gt;&lt;br&gt;EV power, grid power, voltage, mode/state" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F0EAFE;strokeColor=#8261D1;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneInputs">
           <mxGeometry x="28" y="328" width="255" height="86" as="geometry"/>
         </mxCell>
-        <mxCell id="inputManual" value="✋&lt;br&gt;&lt;b&gt;Explicit HA current limit&lt;/b&gt;&lt;br&gt;Manual override only when the Number entity is changed" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF0E8;strokeColor=#D16A35;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneInputs">
+        <mxCell id="inputManual" value="✋&lt;br&gt;&lt;b&gt;Direct HA current limit&lt;/b&gt;&lt;br&gt;Allowed as a Prism command, but overridden while solar balancing is active" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF0E8;strokeColor=#D16A35;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneInputs">
           <mxGeometry x="28" y="426" width="255" height="86" as="geometry"/>
         </mxCell>
 
@@ -67,13 +67,13 @@
         <mxCell id="laneOutput" value="Output to Prism" style="swimlane;html=1;rounded=1;arcSize=4;startSize=36;fillColor=#FFFFFF;strokeColor=#B9C3D3;fontSize=18;fontStyle=1;fontColor=#16233A;" vertex="1" parent="1">
           <mxGeometry x="970" y="125" width="300" height="530" as="geometry"/>
         </mxCell>
-        <mxCell id="output6a" value="🌥️&lt;br&gt;&lt;b&gt;Low surplus&lt;/b&gt;&lt;br&gt;Keep solar mode at 6A unless an explicit HA override exists" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF8DE;strokeColor=#D89B00;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
+        <mxCell id="output6a" value="🌥️&lt;br&gt;&lt;b&gt;Low surplus&lt;/b&gt;&lt;br&gt;Keep solar mode at the calculated minimum, usually 6A" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF8DE;strokeColor=#D89B00;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
           <mxGeometry x="24" y="58" width="250" height="88" as="geometry"/>
         </mxCell>
         <mxCell id="outputRamp" value="✅&lt;br&gt;&lt;b&gt;Enough surplus&lt;/b&gt;&lt;br&gt;Set target amps gradually" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#E9F8EF;strokeColor=#3BAE63;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
           <mxGeometry x="24" y="166" width="250" height="78" as="geometry"/>
         </mxCell>
-        <mxCell id="outputManual" value="✋&lt;br&gt;&lt;b&gt;Manual override&lt;/b&gt;&lt;br&gt;Preserve only the value set through the HA Number entity. Prism pilot is ignored for override detection." style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF0E8;strokeColor=#D16A35;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
+        <mxCell id="outputManual" value="🎯&lt;br&gt;&lt;b&gt;Balancer wins&lt;/b&gt;&lt;br&gt;If Current limit is changed manually, the next balancer cycle republishes its calculated target." style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF0E8;strokeColor=#D16A35;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
           <mxGeometry x="24" y="264" width="250" height="104" as="geometry"/>
         </mxCell>
         <mxCell id="outputMqtt" value="📡&lt;br&gt;&lt;b&gt;MQTT commands&lt;/b&gt;&lt;br&gt;set_current_limit + solar mode" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F0EAFE;strokeColor=#8261D1;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">

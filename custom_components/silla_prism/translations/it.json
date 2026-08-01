@@ -108,9 +108,6 @@
             "set_current_limit": {
                 "name": "Limite corrente"
             },
-            "solar_balance_manual_current_override": {
-                "name": "Override corrente bilanciamento solare"
-            },
             "set_max_current": {
                 "name": "Corrente utente"
             }

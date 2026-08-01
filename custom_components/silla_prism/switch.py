@@ -557,15 +557,8 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 return
 
             self._charging_from_surplus = True
-            manual_current = self._get_manual_current_override()
-            if manual_current is not None:
-                target_current = manual_current
-                current_limit_reason = "manual_current_override"
-            else:
-                target_current = self._get_low_surplus_target_current(
-                    watts_per_amp
-                )
-                current_limit_reason = self._current_limit_reason
+            target_current = self._get_low_surplus_target_current(watts_per_amp)
+            current_limit_reason = self._current_limit_reason
             if target_current == MIN_CHARGE_CURRENT:
                 current_limit_reason = (
                     "low_surplus_hold_6a"
@@ -595,8 +588,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 current_limit_reason=current_limit_reason,
                 decision_reason=SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
             )
-            if manual_current is None:
-                await self._async_publish_current(target_current)
+            await self._async_publish_current(target_current)
             await self._async_publish_mode(MODE_SOLAR)
             return
 
@@ -727,15 +719,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             MIN_CHARGE_CURRENT,
             min(floor(target_power / watts_per_amp), self._max_current),
         )
-
-    def _get_manual_current_override(self) -> int | None:
-        """Return an explicit HA current override, if the user set one."""
-        manual_current = self._entry_data.solar_balance_manual_current_overrides.get(
-            self._port
-        )
-        if manual_current is None or manual_current < MIN_CHARGE_CURRENT:
-            return None
-        return min(manual_current, self._max_current)
 
     def _get_battery_reserve_power(self) -> float:
         """Return how much battery charge power should be reserved for home storage."""
@@ -1098,7 +1081,6 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return "unknown"
 
     async def _async_publish_current(self, current: int) -> None:
-        self._entry_data.solar_balance_manual_current_overrides.pop(self._port, None)
         now = datetime.now(timezone.utc)
         recently_published = (
             self._last_current_publish is not None

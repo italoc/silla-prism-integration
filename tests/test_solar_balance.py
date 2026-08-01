@@ -178,16 +178,6 @@ class SolarBalanceHelperTest(TestCase):
         self.assertIn("-755W", summary)
         self.assertIn("Constraint", summary)
 
-    def test_decision_summary_explains_manual_override(self) -> None:
-        summary = describe_solar_balance_state(
-            SolarBalanceState(
-                target_current=12,
-                current_limit_reason="manual_current_override",
-            )
-        )
-
-        self.assertIn("solar balance manual current override", summary)
-
     def test_decision_summary_uses_italian_when_requested(self) -> None:
         summary = describe_solar_balance_state(
             SolarBalanceState(

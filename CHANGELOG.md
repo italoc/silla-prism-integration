@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.21
+
+- Removed the solar balance manual current override. When Prism is in solar mode
+  and the solar balancer is enabled, the balancer always wins and republishes its
+  calculated `Current limit` target.
+- Updated the solar balance troubleshooting notes and diagnostics diagram to
+  show that manual `Current limit` changes are overridden by the balancer.
+
 ## 0.9.17
 
 - Added solar balance dry-run mode. When enabled, the integration calculates the

@@ -7,13 +7,11 @@ from expected.
 
 Check `Decision summary` and `Decision reason`.
 
-- If the reason is `manual_current_override`, the current was explicitly changed
-  through the Home Assistant `Solar balance manual current` number. Set that
-  number back to `0` to return to automatic balancing.
-- `Current limit` is a direct Prism command. Changing it does not enable the
-  solar balance manual override.
+- When Prism is in solar mode and `Solar balancing` is on, the balancer is the
+  authority for `Current limit`. If `Current limit` is changed manually, the next
+  balancer cycle republishes the calculated target.
 - The Prism `pilot` value is not treated as a manual override. It follows the
-  current requested by the car and should not keep the balancer above 6A.
+  current requested by the controller and should not keep the balancer above 6A.
 - If `Decision summary` says the controller is requesting 6A while Prism still
   reports a higher `pilot`, the integration has sent the lower command but Prism
   has not confirmed it yet. Check delivered current and output power to see

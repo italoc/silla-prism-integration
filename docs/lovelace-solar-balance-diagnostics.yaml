@@ -31,10 +31,8 @@ views:
             name: Raw target current
           - entity: sensor.silla_prism_solar_balance_theoretical_target_current
             name: Theoretical target current
-          - entity: number.silla_prism_solar_balance_manual_current_override
-            name: Manual solar override
           - entity: number.silla_prism_set_current_limit
-            name: Direct Prism current limit
+            name: Direct Prism current limit (overridden by balancer)
           - entity: sensor.silla_prism_output_car_current
             name: Car requested current
 

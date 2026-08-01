@@ -211,12 +211,6 @@ def describe_solar_balance_state(
                 f"Richiedo {target}: Prism riporta ancora pilot "
                 f"{state.reported_current_limit:g}A."
             )
-        if reason == "manual_current_override":
-            return _with_context(
-                f"Mantengo {target}: e attivo l'override manuale del "
-                "bilanciamento solare.",
-                context,
-            )
         if reason == "low_surplus_hold_6a":
             return _with_context(
                 f"Mantengo 6A: il surplus calcolato e basso ({available}).",
@@ -321,11 +315,6 @@ def describe_solar_balance_state(
         return (
             f"Requesting {target}: Prism is still reporting pilot "
             f"{state.reported_current_limit:g}A."
-        )
-    if reason == "manual_current_override":
-        return _with_context(
-            f"Holding {target}: the solar balance manual current override is active.",
-            context,
         )
     if reason == "low_surplus_hold_6a":
         return _with_context(
@@ -444,11 +433,6 @@ def _describe_decision_context(state: SolarBalanceState, is_italian: bool) -> st
         if is_italian:
             return f"Vincolo: export residuo disponibile ({export})."
         return f"Constraint: residual export is available ({export})."
-
-    if state.current_limit_reason == "manual_current_override":
-        if is_italian:
-            return "Vincolo: override manuale del bilanciamento solare."
-        return "Constraint: solar balance manual current override."
 
     if state.decision_reason == SOLAR_BALANCE_EXTERNAL_PAUSED:
         if is_italian:
