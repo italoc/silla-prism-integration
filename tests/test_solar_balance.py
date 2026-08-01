@@ -36,6 +36,7 @@ SOLAR_BALANCE_DISABLED = solar_balance.SOLAR_BALANCE_DISABLED
 SOLAR_BALANCE_EXTERNAL_PAUSED = solar_balance.SOLAR_BALANCE_EXTERNAL_PAUSED
 SOLAR_BALANCE_WAITING_BATTERY_DATA = solar_balance.SOLAR_BALANCE_WAITING_BATTERY_DATA
 SOLAR_BALANCE_WAITING_DATA = solar_balance.SOLAR_BALANCE_WAITING_DATA
+SOLAR_BALANCE_WAITING_SOLAR_MODE = solar_balance.SOLAR_BALANCE_WAITING_SOLAR_MODE
 SURPLUS_SOURCE_PRISM_GRID_BATTERY = solar_balance.SURPLUS_SOURCE_PRISM_GRID_BATTERY
 SURPLUS_SOURCE_SOLAR_HOME_LOAD = solar_balance.SURPLUS_SOURCE_SOLAR_HOME_LOAD
 SolarBalanceState = solar_balance.SolarBalanceState
@@ -238,6 +239,17 @@ class SolarBalanceHelperTest(TestCase):
         )
 
         self.assertIn("Theoretical target 10A", summary)
+
+    def test_decision_summary_reports_waiting_solar_mode(self) -> None:
+        summary = describe_solar_balance_state(
+            SolarBalanceState(
+                status=SOLAR_BALANCE_WAITING_SOLAR_MODE,
+                current_limit_reason="waiting_solar_mode",
+                theoretical_target_current=10,
+            )
+        )
+
+        self.assertIn("not in solar mode", summary)
 
     def test_decision_summary_handles_disabled_and_waiting_data(self) -> None:
         self.assertEqual(

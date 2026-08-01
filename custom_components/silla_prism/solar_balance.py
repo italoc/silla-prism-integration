@@ -9,6 +9,7 @@ from .const import DOMAIN
 SOLAR_BALANCE_DISABLED = "disabled"
 SOLAR_BALANCE_WAITING_DATA = "waiting_data"
 SOLAR_BALANCE_WAITING_BATTERY_DATA = "waiting_battery_data"
+SOLAR_BALANCE_WAITING_SOLAR_MODE = "waiting_solar_mode"
 SOLAR_BALANCE_WAITING_STABLE_SURPLUS = "waiting_stable_surplus"
 SOLAR_BALANCE_PAUSED_LOW_SURPLUS = "paused_low_surplus"
 SOLAR_BALANCE_EXTERNAL_PAUSED = "external_paused"
@@ -245,6 +246,12 @@ def describe_solar_balance_state(
                 "di aumentare.",
                 context,
             )
+        if reason == "waiting_solar_mode":
+            return _with_context(
+                "Attendo: Prism non e in modalita solare, quindi non comando "
+                "corrente o modalita.",
+                context,
+            )
         if reason == "autolimit_low_surplus":
             return (
                 "Attendo: l'autolimit Prism e attivo e l'import dalla rete e "
@@ -296,6 +303,8 @@ def describe_solar_balance_state(
             return "In attesa dei dati necessari dai sensori."
         if state.status == SOLAR_BALANCE_WAITING_BATTERY_DATA:
             return "In attesa del dato potenza batteria."
+        if state.status == SOLAR_BALANCE_WAITING_SOLAR_MODE:
+            return "In attesa della modalita solare Prism."
         return f"Decisione: {reason or state.status}."
 
     if state.dry_run and isinstance(state.target_current, (int, float)):
@@ -344,6 +353,12 @@ def describe_solar_balance_state(
             f"Waiting {remaining}s: surplus must stay stable before increasing.",
             context,
         )
+    if reason == "waiting_solar_mode":
+        return _with_context(
+            "Waiting: Prism is not in solar mode, so the integration will not "
+            "command current or mode.",
+            context,
+        )
     if reason == "autolimit_low_surplus":
         return "Waiting: Prism autolimit is active and grid import is still too high."
     if reason == "autolimit_wait_stable_surplus":
@@ -384,6 +399,8 @@ def describe_solar_balance_state(
         return "Waiting for required sensor data."
     if state.status == SOLAR_BALANCE_WAITING_BATTERY_DATA:
         return "Waiting for battery power data."
+    if state.status == SOLAR_BALANCE_WAITING_SOLAR_MODE:
+        return "Waiting for Prism solar mode."
     return f"Decision: {reason or state.status}."
 
 

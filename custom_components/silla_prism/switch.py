@@ -34,6 +34,7 @@ from .solar_balance import (
     SOLAR_BALANCE_LOW_SURPLUS_KEEP_CHARGING,
     SOLAR_BALANCE_PAUSED_LOW_SURPLUS,
     SOLAR_BALANCE_WAITING_BATTERY_DATA,
+    SOLAR_BALANCE_WAITING_SOLAR_MODE,
     SOLAR_BALANCE_WAITING_STABLE_SURPLUS,
     SOLAR_BALANCE_WAITING_DATA,
     SolarBalanceState,
@@ -466,6 +467,32 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
                 theoretical_target_current=theoretical_target_current,
                 current_limit_reason="external_pause",
                 decision_reason=SOLAR_BALANCE_EXTERNAL_PAUSED,
+            )
+            return
+
+        if not self._is_solar_control_mode:
+            self._reset_start_delay()
+            self._reset_residual_export()
+            self._charging_from_surplus = False
+            self._track_grid_error()
+            self._update_solar_balance_state(
+                SOLAR_BALANCE_WAITING_SOLAR_MODE,
+                0,
+                available_power,
+                target_power,
+                0,
+                battery_power,
+                battery_charge_power,
+                battery_discharge_power,
+                battery_power_to_exclude,
+                battery_reserve_power,
+                battery_reserve_shortfall_power,
+                surplus_source=surplus_source,
+                raw_target_current=theoretical_target_current,
+                target_current=0,
+                theoretical_target_current=theoretical_target_current,
+                current_limit_reason="waiting_solar_mode",
+                decision_reason=SOLAR_BALANCE_WAITING_SOLAR_MODE,
             )
             return
 
@@ -1056,6 +1083,10 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             STATE_PAUSE,
             "pause",
         )
+
+    @property
+    def _is_solar_control_mode(self) -> bool:
+        return self._reported_mode in (MODE_SOLAR, MODE_AUTOLIMIT)
 
     def _get_missing_data_reason(self) -> str:
         if self._grid_power is None:
