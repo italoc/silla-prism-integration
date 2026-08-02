@@ -153,6 +153,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._ramp_direction = "none"
         self._current_limit_reason = "waiting_data"
         self._charging_from_surplus = False
+        self._restart_from_min_current = False
         self._last_autolimit_recovery: datetime | None = None
         self._surplus_since: datetime | None = None
         self._residual_export_since: datetime | None = None
@@ -285,6 +286,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         self._reset_start_delay()
         self._reset_residual_export()
         self._charging_from_surplus = False
+        self._restart_from_min_current = False
         self._update_solar_balance_state(
             SOLAR_BALANCE_DISABLED,
             0,
@@ -448,6 +450,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             self._reset_start_delay()
             self._reset_residual_export()
             self._charging_from_surplus = False
+            self._restart_from_min_current = False
             self._track_grid_error()
             self._update_solar_balance_state(
                 SOLAR_BALANCE_EXTERNAL_PAUSED,
@@ -474,6 +477,7 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
             self._reset_start_delay()
             self._reset_residual_export()
             self._charging_from_surplus = False
+            self._restart_from_min_current = False
             self._track_grid_error()
             self._update_solar_balance_state(
                 SOLAR_BALANCE_WAITING_SOLAR_MODE,
@@ -499,8 +503,9 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         if target_power < min_power:
             # Type 2 charging cannot run below 6A. In low-surplus situations we
             # keep Prism in solar mode at the minimum, unless Prism itself is in
-            # autolimit, and separately recover stable export when it appears.
+            # autolimit. The next restart is forced to begin from 6A.
             self._reset_start_delay()
+            self._restart_from_min_current = True
             surplus_current = max(target_power / watts_per_amp, 0)
             if self._reported_mode == MODE_AUTOLIMIT:
                 if self._can_recover_from_autolimit():
@@ -595,6 +600,33 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         target_current = floor(target_power / (voltage * self._phases))
         target_current = max(MIN_CHARGE_CURRENT, min(target_current, self._max_current))
         self._raw_target_current = target_current
+        if self._should_restart_from_min_current():
+            self._reset_residual_export()
+            self._current_limit_reason = "restart_min_current"
+            self._update_solar_balance_state(
+                SOLAR_BALANCE_CHARGING_SURPLUS,
+                MIN_CHARGE_CURRENT,
+                available_power,
+                target_power,
+                0,
+                battery_power,
+                battery_charge_power,
+                battery_discharge_power,
+                battery_power_to_exclude,
+                battery_reserve_power,
+                battery_reserve_shortfall_power,
+                surplus_source=surplus_source,
+                raw_target_current=self._raw_target_current,
+                target_current=MIN_CHARGE_CURRENT,
+                theoretical_target_current=target_current,
+                current_limit_reason="restart_min_current",
+                decision_reason="charging_surplus",
+            )
+            await self._async_publish_current(MIN_CHARGE_CURRENT)
+            await self._async_publish_mode(MODE_SOLAR)
+            self._charging_from_surplus = True
+            return
+
         target_current = self._apply_current_optimizations(
             target_current,
             watts_per_amp,
@@ -785,21 +817,11 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
         return target_current
 
     def _get_low_surplus_target_current(self, watts_per_amp: float) -> int:
-        """Recover current from persistent export while held at the 6A minimum."""
-        last_current = self._get_reference_current() or MIN_CHARGE_CURRENT
+        """Hold at the 6A minimum while there is not enough surplus to restart."""
         self._track_grid_error()
-        if not self._track_residual_export():
-            self._current_limit_reason = "target_current"
-            return MIN_CHARGE_CURRENT
-
-        step = self._get_proportional_increase_step(watts_per_amp)
-        target_current = min(
-            self._max_current,
-            max(MIN_CHARGE_CURRENT, last_current) + step,
-        )
-        self._reset_residual_export()
-        self._current_limit_reason = "residual_export_recovery"
-        return target_current
+        self._track_residual_export()
+        self._current_limit_reason = "target_current"
+        return MIN_CHARGE_CURRENT
 
     def _get_battery_charge_target_current(
         self,
@@ -848,7 +870,26 @@ class PrismSolarBatteryBalance(SwitchEntity, RestoreEntity):
 
     def _get_reference_current(self) -> int | None:
         """Return the best known wallbox current limit for ramp decisions."""
+        if self._restart_from_min_current:
+            return MIN_CHARGE_CURRENT
         return self._reported_current_limit or self._last_current_command
+
+    def _should_restart_from_min_current(self) -> bool:
+        """Return True until Prism has acknowledged a 6A restart after low surplus."""
+        if not self._restart_from_min_current:
+            return False
+
+        if self._reported_current_limit is not None:
+            if self._reported_current_limit <= MIN_CHARGE_CURRENT:
+                self._restart_from_min_current = False
+                return False
+            return True
+
+        if self._last_current_command == MIN_CHARGE_CURRENT:
+            self._restart_from_min_current = False
+            return False
+
+        return True
 
     def _track_grid_error(self) -> None:
         """Update import/export diagnostics relative to the configured buffer."""

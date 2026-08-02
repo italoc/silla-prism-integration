@@ -17,7 +17,8 @@ Check `Decision summary` and `Decision reason`.
   has not confirmed it yet. Check delivered current and output power to see
   whether the car is actually charging above 6A.
 - If `Unused export power` is above the configured residual export threshold for
-  long enough, residual export recovery can raise current above 6A.
+  long enough after Prism has confirmed 6A, residual export recovery can raise
+  current above 6A in later ramped steps.
 
 ## The wallbox is in autolimit and does not restart
 

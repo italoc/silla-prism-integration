@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.23
+
+- Force solar balancing restarts to begin from 6A after a low-surplus block.
+  Stale Prism `pilot` values or manual `Current limit` changes such as 32A are
+  no longer used as the ramp base after the controller has held/blocked charging
+  for insufficient surplus.
+- Residual export tracking still updates diagnostics, but low-surplus recovery
+  no longer jumps directly above the Type 2 minimum.
+- Added a decision summary for the protected 6A restart path.
+
 ## 0.9.22
 
 - Changed solar balancing ownership: when Prism is in solar mode and the solar

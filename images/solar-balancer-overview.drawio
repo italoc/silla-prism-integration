@@ -67,7 +67,7 @@
         <mxCell id="laneOutput" value="Output to Prism" style="swimlane;html=1;rounded=1;arcSize=4;startSize=36;fillColor=#FFFFFF;strokeColor=#B9C3D3;fontSize=18;fontStyle=1;fontColor=#16233A;" vertex="1" parent="1">
           <mxGeometry x="970" y="125" width="300" height="530" as="geometry"/>
         </mxCell>
-        <mxCell id="output6a" value="🌥️&lt;br&gt;&lt;b&gt;Low surplus&lt;/b&gt;&lt;br&gt;Keep solar mode at the calculated minimum, usually 6A" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF8DE;strokeColor=#D89B00;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
+        <mxCell id="output6a" value="🌥️&lt;br&gt;&lt;b&gt;Low surplus&lt;/b&gt;&lt;br&gt;Hold and restart from the 6A minimum; never reuse a stale 32A pilot" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFF8DE;strokeColor=#D89B00;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
           <mxGeometry x="24" y="58" width="250" height="88" as="geometry"/>
         </mxCell>
         <mxCell id="outputRamp" value="✅&lt;br&gt;&lt;b&gt;Enough surplus&lt;/b&gt;&lt;br&gt;Set target amps gradually" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#E9F8EF;strokeColor=#3BAE63;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="laneOutput">
@@ -104,7 +104,7 @@
         <mxCell id="rulePause" value="⏸️ &lt;b&gt;Wallbox/app pause&lt;/b&gt;&lt;br&gt;If Prism is paused, the integration does not resume charging automatically." style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#F3F5F8;strokeColor=#79879A;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
           <mxGeometry x="435" y="730" width="280" height="92" as="geometry"/>
         </mxCell>
-        <mxCell id="ruleExport" value="↗️ &lt;b&gt;Residual export recovery&lt;/b&gt;&lt;br&gt;If unused export stays available long enough, add current even from the 6A hold." style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#EAF7FF;strokeColor=#3B8AC4;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
+        <mxCell id="ruleExport" value="↗️ &lt;b&gt;Residual export recovery&lt;/b&gt;&lt;br&gt;After Prism confirms 6A, stable unused export can add current in ramped steps." style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#EAF7FF;strokeColor=#3B8AC4;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">
           <mxGeometry x="735" y="730" width="280" height="92" as="geometry"/>
         </mxCell>
         <mxCell id="ruleDiag" value="📊 &lt;b&gt;Diagnostic sensors&lt;/b&gt;&lt;br&gt;Expose surplus, corrected home load, target amps, countdowns and decision reason." style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#FFFFFF;strokeColor=#243B63;fontSize=14;fontColor=#1F2937;spacing=8;" vertex="1" parent="1">

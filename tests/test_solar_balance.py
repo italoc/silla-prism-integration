@@ -241,6 +241,19 @@ class SolarBalanceHelperTest(TestCase):
 
         self.assertIn("not in solar mode", summary)
 
+    def test_decision_summary_reports_restart_from_minimum(self) -> None:
+        summary = describe_solar_balance_state(
+            SolarBalanceState(
+                status=SOLAR_BALANCE_CHARGING_SURPLUS,
+                target_current=6,
+                current_limit_reason="restart_min_current",
+                reported_current_limit=32,
+            )
+        )
+
+        self.assertIn("Restarting from 6A", summary)
+        self.assertIn("old current limit", summary)
+
     def test_decision_summary_handles_disabled_and_waiting_data(self) -> None:
         self.assertEqual(
             describe_solar_balance_state(

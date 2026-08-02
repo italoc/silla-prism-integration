@@ -240,6 +240,12 @@ def describe_solar_balance_state(
                 "di aumentare.",
                 context,
             )
+        if reason == "restart_min_current":
+            return _with_context(
+                "Riparto da 6A: dopo un blocco per surplus basso non uso il "
+                "vecchio limite corrente come base.",
+                context,
+            )
         if reason == "waiting_solar_mode":
             return _with_context(
                 "Attendo: Prism non e in modalita solare, quindi non comando "
@@ -342,6 +348,12 @@ def describe_solar_balance_state(
             f"Waiting {remaining}s: surplus must stay stable before increasing.",
             context,
         )
+    if reason == "restart_min_current":
+        return _with_context(
+            "Restarting from 6A: after a low-surplus block, the old current "
+            "limit is not used as the ramp base.",
+            context,
+        )
     if reason == "waiting_solar_mode":
         return _with_context(
             "Waiting: Prism is not in solar mode, so the integration will not "
@@ -410,6 +422,11 @@ def _describe_decision_context(state: SolarBalanceState, is_italian: bool) -> st
         if is_italian:
             return "Vincolo: intervallo minimo tra aumenti corrente."
         return "Constraint: minimum current increase interval."
+
+    if state.current_limit_reason == "restart_min_current":
+        if is_italian:
+            return "Vincolo: ripartenza prudente dal minimo Type 2."
+        return "Constraint: conservative restart from the Type 2 minimum."
 
     if state.current_limit_reason in ("ramp_up_limited", "ramp_down_limited"):
         if is_italian:
