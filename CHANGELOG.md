@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.24
+
+- Fixed touch binary sensors not subscribing to their MQTT event topic after
+  entity setup.
+- Renamed the single-touch entity key from the misspelled `touch_sigle` to
+  `touch_single`; Home Assistant will expose it as
+  `binary_sensor.silla_prism_touch_single`.
+- Made Prism touch event parsing tolerant of numeric, sequence-like, JSON-like
+  and textual MQTT payloads so single, double and long press binary sensors can
+  detect events across firmware/protocol variants.
+- Double touch now accepts both the historical `1,1` sequence and the compact
+  `2` event code.
+- Refreshes the touch pulse timer when repeated events arrive close together.
+
 ## 0.9.23
 
 - Force solar balancing restarts to begin from 6A after a low-surplus block.

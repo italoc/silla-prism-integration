@@ -30,7 +30,9 @@ Start from these pages:
 ## Main Features
 
 - Silla Prism MQTT entities for state, power, current, energy, mode and touch
-  gestures.
+  gestures. Touch gestures expose `binary_sensor.silla_prism_touch_single`,
+  `binary_sensor.silla_prism_touch_double` and
+  `binary_sensor.silla_prism_touch_long`.
 - Prism `hybrid` mode support in the mode select and current port mode sensor.
 - Optional solar battery balancing switch for each charging port.
 - Direct surplus calculation from external solar production and house load

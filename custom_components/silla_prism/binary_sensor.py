@@ -19,6 +19,7 @@ from .const import BINARY_SENSOR_DOMAIN
 from .domain_data import DomainData
 from .entity import PrismBaseEntity
 from .entry_data import RuntimeEntryData
+from .touch_events import normalize_touch_payload
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,7 +69,8 @@ class PrismEventBinarySensorEntityDescription(
 ):
     """A class that describes prism button event sensor entities."""
 
-    sequence: frozenset[int] = (1,)
+    sequence: tuple[int, ...] = (1,)
+    accepted_sequences: tuple[tuple[int, ...], ...] | None = None
 
 
 class PrismBinarySensor(PrismBaseEntity, BinarySensorEntity):
@@ -106,6 +108,16 @@ class PrismBinarySensor(PrismBaseEntity, BinarySensorEntity):
     def _value_is_expired(self):
         """Triggered when value is expired."""
         self._attr_is_on = False
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to mqtt."""
+        await self._subscribe_topic()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unsubscribe from mqtt."""
+        _LOGGER.debug("async_will_remove_from_hass")
+        await super().async_will_remove_from_hass()
+        self.cleanup_expiration_trigger()
 
 
 class PrismErrorBinarySensor(PrismBinarySensor):
@@ -200,6 +212,7 @@ class PrismEventBinarySensor(PrismBinarySensor):
                 device_class=description.device_class,
                 has_entity_name=description.has_entity_name,
                 sequence=description.sequence,
+                accepted_sequences=description.accepted_sequences,
                 translation_key=description.translation_key,
                 expire_after=description.expire_after,
             )
@@ -210,6 +223,7 @@ class PrismEventBinarySensor(PrismBinarySensor):
             device_class=description.device_class,
             has_entity_name=description.has_entity_name,
             sequence=description.sequence,
+            accepted_sequences=description.accepted_sequences,
             translation_key=description.translation_key,
             expire_after=description.expire_after,
         )
@@ -225,24 +239,32 @@ class PrismEventBinarySensor(PrismBinarySensor):
         super().__init__(
             entry_data, self._get_description(port, ismultiport, description), port
         )
-        self._sequence: frozenset[int] = description.sequence
+        self._accepted_sequences = description.accepted_sequences or (
+            description.sequence,
+        )
 
     def _message_received(self, msg) -> None:
         """Update the sensor with the most recent event."""
         self.schedule_expiration_callback()
 
-        # Handle input touch button
-        _seq = msg.payload.split(",")
-        try:
-            _seq_int = tuple(int(x) for x in _seq)
-            if _seq_int == self._sequence:
-                self._attr_is_on = True
-                self._expiration_trigger = async_call_later(
-                    self.hass, 2.0, self._restore_value
-                )
-                self.schedule_update_ha_state()
-        except ValueError:
-            pass
+        sequence = normalize_touch_payload(msg.payload)
+        if sequence not in self._accepted_sequences:
+            _LOGGER.debug(
+                "Ignoring touch payload %r parsed as %s for topic %s; expected %s",
+                msg.payload,
+                sequence,
+                self._topic,
+                self._accepted_sequences,
+            )
+            return
+
+        if self._expiration_trigger:
+            self._expiration_trigger()
+        self._attr_is_on = True
+        self._expiration_trigger = async_call_later(
+            self.hass, 2.0, self._restore_value
+        )
+        self.schedule_update_ha_state()
 
     @callback
     def _restore_value(self, *_: datetime) -> None:
@@ -276,13 +298,14 @@ ERROR_BINARYSENSORS = [
 
 EVENTS_BINARYSENSORS = [
     PrismEventBinarySensorEntityDescription(
-        key="touch_sigle_{}",
+        key="touch_single_{}",
         topic="{}/input/touch",
         entity_category=EntityCategory.DIAGNOSTIC,
         device_class=BinarySensorDeviceClass.MOTION,
         has_entity_name=True,
         sequence=(1,),
-        translation_key="touch_sigle",
+        accepted_sequences=((1,),),
+        translation_key="touch_single",
         expire_after=0,
     ),
     PrismEventBinarySensorEntityDescription(
@@ -295,6 +318,7 @@ EVENTS_BINARYSENSORS = [
             1,
             1,
         ),
+        accepted_sequences=((1, 1), (2,)),
         translation_key="touch_double",
         expire_after=0,
     ),
@@ -305,6 +329,7 @@ EVENTS_BINARYSENSORS = [
         device_class=BinarySensorDeviceClass.MOTION,
         has_entity_name=True,
         sequence=(3,),
+        accepted_sequences=((3,),),
         translation_key="touch_long",
         expire_after=0,
     ),

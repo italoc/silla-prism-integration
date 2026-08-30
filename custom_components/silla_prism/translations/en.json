@@ -84,7 +84,7 @@
     },
     "entity": {
         "binary_sensor": {
-            "touch_sigle": {
+            "touch_single": {
                 "name": "Single touch"
             },
             "touch_double": {
