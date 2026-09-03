@@ -26,6 +26,7 @@ Start from these pages:
 - [How Solar Balancing Works](https://github.com/italoc/silla-prism-integration/wiki/How-Solar-Balancing-Works)
 - [Troubleshooting](https://github.com/italoc/silla-prism-integration/wiki/Troubleshooting)
 - [Release Notes](https://github.com/italoc/silla-prism-integration/wiki/Release-Notes)
+- [Home Assistant Core Submission](docs/home-assistant-core-submission.md)
 
 ## Main Features
 
@@ -44,6 +45,24 @@ Start from these pages:
 - Diagnostic sensors that explain the latest balancing decision.
 - Dry-run mode to test the balancing algorithm without sending MQTT commands to
   Prism.
+
+## Touch Gesture Sensors
+
+The Prism touch input is exposed as short-lived binary sensor pulses:
+
+- `binary_sensor.silla_prism_touch_single` for one touch.
+- `binary_sensor.silla_prism_touch_double` for two touches.
+- `binary_sensor.silla_prism_touch_long` for a long press.
+
+Each event turns the matching sensor on for about two seconds, then restores it
+to off. Use a state trigger from `off` to `on` in Home Assistant automations.
+
+Since `0.9.24`, the integration subscribes the touch sensors directly to the
+Prism MQTT touch topic and accepts numeric, repeated-sequence, JSON-like and
+textual payload variants. The old misspelled
+`binary_sensor.silla_prism_touch_sigle` entity was replaced by
+`binary_sensor.silla_prism_touch_single`; update any manual references if you
+created them before `0.9.24`.
 
 ## Quick Install
 

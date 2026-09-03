@@ -94,3 +94,26 @@ immediately. If export remains available beyond the residual export threshold,
 Make sure the manifest version and tag match, for example manifest `0.9.11` and
 tag `v0.9.11`. Use normal three-part versions. Avoid four-part versions such as
 `0.9.9.10`, because HACS can order them unexpectedly.
+
+## Touch sensors do not detect button presses
+
+Touch gestures are event-like binary sensors. A valid event turns the matching
+sensor on briefly and then back off after about two seconds. If the current
+state is already off, check the Logbook around the press time instead of only
+looking at the live state.
+
+Expected entities are:
+
+- `binary_sensor.silla_prism_touch_single`
+- `binary_sensor.silla_prism_touch_double`
+- `binary_sensor.silla_prism_touch_long`
+
+The pre-`0.9.24` misspelled entity
+`binary_sensor.silla_prism_touch_sigle` should no longer be used. If it remains
+as unavailable after upgrading, remove the stale registry entry and use
+`binary_sensor.silla_prism_touch_single`.
+
+If the sensors still do not change, verify that Prism MQTT publishes events on
+`<topic>/<port>/input/touch`, for example `prism/1/input/touch` for the default
+topic and a single-port Prism. Supported payload shapes include `1`, `1,1`,
+`2`, `[1, 1]`, `single`, `double` and `long`.
