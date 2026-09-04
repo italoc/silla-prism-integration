@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Added a standalone Home Assistant automation blueprint for solar and home
+  battery balancing outside the device integration.
+- Solar balancing only owns the current limit in solar mode; normal, hybrid and
+  externally paused modes remain manual.
+- Low-surplus pauses and automatic recovery both use a protected 6A sequence.
+- Added restart delay, current ramps, export reserve, power deadband, battery
+  SOC reserves, dry-run support and one independent controller per DUO port.
+- Added Home Assistant runtime tests for mode ownership, unavailable data,
+  manual current correction, configured maximum current and safe restart.
+
 ## 0.9.24
 
 - Fixed touch binary sensors not subscribing to their MQTT event topic after

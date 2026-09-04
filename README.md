@@ -27,6 +27,7 @@ Start from these pages:
 - [Troubleshooting](https://github.com/italoc/silla-prism-integration/wiki/Troubleshooting)
 - [Release Notes](https://github.com/italoc/silla-prism-integration/wiki/Release-Notes)
 - [Home Assistant Core Submission](docs/home-assistant-core-submission.md)
+- [Standalone Solar Balancer Blueprint](docs/solar-balancer-blueprint.md)
 
 ## Main Features
 
@@ -45,6 +46,8 @@ Start from these pages:
 - Diagnostic sensors that explain the latest balancing decision.
 - Dry-run mode to test the balancing algorithm without sending MQTT commands to
   Prism.
+- Optional standalone automation blueprint that keeps balancing logic outside
+  the device integration and supports one independent automation per DUO port.
 
 ## Touch Gesture Sensors
 

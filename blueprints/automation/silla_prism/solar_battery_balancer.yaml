@@ -1,0 +1,497 @@
+blueprint:
+  name: Silla Prism - Solar battery balancer
+  description: >-
+    Controls a Silla Prism charging port from photovoltaic production, home load,
+    and battery power. It acts only in solar mode. Low surplus sets 6 A before
+    pausing, and every automatic restart begins at 6 A.
+  domain: automation
+  source_url: https://github.com/italoc/silla-prism-integration/blob/feature/solar-balancer-blueprint/blueprints/automation/silla_prism/solar_battery_balancer.yaml
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    prism_controls:
+      name: Prism controls
+      icon: mdi:ev-station
+      collapsed: false
+      input:
+        enabled_entity:
+          name: Balancer enabled
+          selector:
+            entity:
+              filter:
+                - domain: input_boolean
+        pause_marker_entity:
+          name: Balancer pause marker
+          description: Dedicated helper used to distinguish automatic and manual pauses.
+          selector:
+            entity:
+              filter:
+                - domain: input_boolean
+        mode_entity:
+          name: Prism charging mode
+          selector:
+            entity:
+              filter:
+                - domain: select
+                  integration: silla_prism
+        current_limit_entity:
+          name: Prism current limit
+          selector:
+            entity:
+              filter:
+                - domain: number
+                  integration: silla_prism
+    power_sensors:
+      name: Power sensors
+      icon: mdi:solar-power-variant
+      collapsed: false
+      input:
+        solar_power_entity:
+          name: Solar production
+          description: Positive photovoltaic production in watts.
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: power
+        home_load_entity:
+          name: Home load
+          description: Positive household consumption in watts.
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: power
+        ev_power_entity:
+          name: Prism charging power
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: power
+        battery_power_entity:
+          name: Battery power
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: power
+        battery_soc_entity:
+          name: Battery state of charge
+          description: Optional battery percentage sensor.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: battery
+    installation:
+      name: Installation
+      icon: mdi:transmission-tower
+      collapsed: true
+      input:
+        home_load_includes_ev:
+          name: Home load includes EV charging
+          default: false
+          selector:
+            boolean:
+        battery_discharge_positive:
+          name: Positive battery power means discharge
+          default: true
+          selector:
+            boolean:
+        nominal_voltage:
+          name: Nominal phase voltage
+          default: 230
+          selector:
+            number:
+              min: 100
+              max: 260
+              step: 1
+              unit_of_measurement: V
+              mode: box
+        charging_phases:
+          name: Charging phases
+          default: 1
+          selector:
+            number:
+              min: 1
+              max: 3
+              step: 2
+              mode: slider
+        maximum_current:
+          name: Maximum charging current
+          default: 16
+          selector:
+            number:
+              min: 6
+              max: 32
+              step: 1
+              unit_of_measurement: A
+              mode: box
+    battery_priority:
+      name: Battery priority
+      icon: mdi:home-battery
+      collapsed: true
+      input:
+        use_excess_battery_charge:
+          name: Use battery charge above reserve
+          default: true
+          selector:
+            boolean:
+        battery_max_charge_power:
+          name: Maximum battery charge power
+          default: 2700
+          selector:
+            number:
+              min: 0
+              max: 30000
+              step: 100
+              unit_of_measurement: W
+              mode: box
+        battery_soc_mid:
+          name: Middle SOC threshold
+          default: 40
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+        battery_soc_high:
+          name: High SOC threshold
+          default: 80
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+        battery_mid_reserve_power:
+          name: Reserve above middle SOC
+          default: 1500
+          selector:
+            number:
+              min: 0
+              max: 30000
+              step: 100
+              unit_of_measurement: W
+              mode: box
+        battery_high_reserve_power:
+          name: Reserve above high SOC
+          default: 1000
+          selector:
+            number:
+              min: 0
+              max: 30000
+              step: 100
+              unit_of_measurement: W
+              mode: box
+    tuning:
+      name: Balancer tuning
+      icon: mdi:tune-variant
+      collapsed: true
+      input:
+        target_export_power:
+          name: Grid export reserve
+          default: 100
+          selector:
+            number:
+              min: 0
+              max: 5000
+              step: 50
+              unit_of_measurement: W
+              mode: box
+        deadband_power:
+          name: Power deadband
+          default: 150
+          selector:
+            number:
+              min: 0
+              max: 3000
+              step: 25
+              unit_of_measurement: W
+              mode: box
+        increase_step:
+          name: Maximum increase per cycle
+          default: 1
+          selector:
+            number:
+              min: 1
+              max: 10
+              step: 1
+              unit_of_measurement: A
+        decrease_step:
+          name: Maximum decrease per cycle
+          default: 3
+          selector:
+            number:
+              min: 1
+              max: 16
+              step: 1
+              unit_of_measurement: A
+        restart_delay:
+          name: Stable surplus delay before restart
+          default: 60
+          selector:
+            number:
+              min: 0
+              max: 900
+              step: 5
+              unit_of_measurement: s
+              mode: box
+        dry_run:
+          name: Dry run
+          description: Calculate without changing Prism or the pause marker.
+          default: false
+          selector:
+            boolean:
+
+triggers:
+  - trigger: state
+    entity_id: !input enabled_entity
+  - trigger: state
+    entity_id: !input mode_entity
+  - trigger: state
+    entity_id: !input current_limit_entity
+  - trigger: state
+    entity_id: !input solar_power_entity
+  - trigger: state
+    entity_id: !input home_load_entity
+  - trigger: state
+    entity_id: !input ev_power_entity
+  - trigger: state
+    entity_id: !input battery_power_entity
+  - trigger: time_pattern
+    seconds: "/10"
+  - trigger: homeassistant
+    event: start
+
+variables:
+  enabled_entity: !input enabled_entity
+  pause_marker_entity: !input pause_marker_entity
+  mode_entity: !input mode_entity
+  current_limit_entity: !input current_limit_entity
+  solar_power_entity: !input solar_power_entity
+  home_load_entity: !input home_load_entity
+  ev_power_entity: !input ev_power_entity
+  battery_power_entity: !input battery_power_entity
+  battery_soc_entity: !input battery_soc_entity
+  home_load_includes_ev: !input home_load_includes_ev
+  battery_discharge_positive: !input battery_discharge_positive
+  nominal_voltage: !input nominal_voltage
+  charging_phases: !input charging_phases
+  maximum_current: !input maximum_current
+  use_excess_battery_charge: !input use_excess_battery_charge
+  battery_max_charge_power: !input battery_max_charge_power
+  battery_soc_mid: !input battery_soc_mid
+  battery_soc_high: !input battery_soc_high
+  battery_mid_reserve_power: !input battery_mid_reserve_power
+  battery_high_reserve_power: !input battery_high_reserve_power
+  target_export_power: !input target_export_power
+  deadband_power: !input deadband_power
+  increase_step: !input increase_step
+  decrease_step: !input decrease_step
+  restart_delay: !input restart_delay
+  dry_run: !input dry_run
+  solar_power: "{{ states(solar_power_entity) | float(none) }}"
+  home_load_power: "{{ states(home_load_entity) | float(none) }}"
+  ev_power: "{{ states(ev_power_entity) | float(none) }}"
+  battery_power: "{{ states(battery_power_entity) | float(none) }}"
+  battery_soc: >-
+    {{ states(battery_soc_entity) | float(none) if battery_soc_entity else none }}
+  values_valid: >-
+    {{ solar_power is number and home_load_power is number and ev_power is number
+       and battery_power is number }}
+
+conditions: []
+
+actions:
+  - choose:
+      - conditions: "{{ not is_state(enabled_entity, 'on') }}"
+        sequence:
+          - if: "{{ is_state(pause_marker_entity, 'on') and not dry_run }}"
+            then:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: !input pause_marker_entity
+          - stop: Solar balancing is disabled
+      - conditions: "{{ states(mode_entity) in ['normal', 'hybrid'] }}"
+        sequence:
+          - if: "{{ is_state(pause_marker_entity, 'on') and not dry_run }}"
+            then:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: !input pause_marker_entity
+          - stop: Prism is not in solar mode
+      - conditions: >-
+          {{ is_state(mode_entity, 'paused')
+             and not is_state(pause_marker_entity, 'on') }}
+        sequence:
+          - stop: Prism was paused outside this balancer
+
+  - condition: template
+    value_template: "{{ values_valid }}"
+
+  - variables:
+      effective_home_load: >-
+        {{ [home_load_power - ev_power, 0] | max
+           if home_load_includes_ev else [home_load_power, 0] | max }}
+      normalized_battery_power: >-
+        {{ battery_power if battery_discharge_positive else -battery_power }}
+      battery_charge_power: "{{ [-normalized_battery_power, 0] | max }}"
+      battery_reserve_power: >-
+        {% if battery_soc is not number %}
+          {{ battery_max_charge_power }}
+        {% elif battery_soc >= 95 %}
+          0
+        {% elif battery_soc >= battery_soc_high %}
+          {{ battery_high_reserve_power }}
+        {% elif battery_soc >= battery_soc_mid %}
+          {{ battery_mid_reserve_power }}
+        {% else %}
+          {{ battery_max_charge_power }}
+        {% endif %}
+      battery_reserve_shortfall: >-
+        {{ [battery_reserve_power - battery_charge_power, 0] | max }}
+      reusable_battery_power: >-
+        {{ [battery_charge_power - battery_reserve_power, 0] | max
+           if use_excess_battery_charge else 0 }}
+      available_power: >-
+        {{ [solar_power, 0] | max - effective_home_load
+           - battery_reserve_shortfall + reusable_battery_power }}
+      watts_per_amp: "{{ nominal_voltage * charging_phases }}"
+      minimum_power: "{{ 6 * watts_per_amp }}"
+      target_power: "{{ available_power - target_export_power }}"
+      reported_current: "{{ states(current_limit_entity) | float(none) }}"
+      raw_target_current: >-
+        {{ (target_power / watts_per_amp) | round(0, 'floor') | int }}
+      bounded_target_current: >-
+        {{ [[raw_target_current, 6] | max, maximum_current] | min }}
+      current_power_error: >-
+        {{ target_power - reported_current * watts_per_amp
+           if reported_current is number else 0 }}
+      requested_current: >-
+        {% if reported_current is not number %}
+          {{ bounded_target_current }}
+        {% elif current_power_error | abs <= deadband_power %}
+          {{ reported_current | round(0) | int }}
+        {% elif bounded_target_current > reported_current %}
+          {{ [bounded_target_current, reported_current + increase_step] | min
+             | round(0, 'floor') | int }}
+        {% else %}
+          {{ [[bounded_target_current, reported_current - decrease_step] | max,
+               maximum_current] | min | round(0, 'ceil') | int }}
+        {% endif %}
+
+  - choose:
+      - conditions: "{{ target_power < minimum_power }}"
+        sequence:
+          - if: "{{ is_state(mode_entity, 'solar') and not dry_run }}"
+            then:
+              - action: number.set_value
+                target:
+                  entity_id: !input current_limit_entity
+                data:
+                  value: 6
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: !input pause_marker_entity
+              - action: select.select_option
+                target:
+                  entity_id: !input mode_entity
+                data:
+                  option: paused
+          - stop: Insufficient solar surplus
+      - conditions: >-
+          {{ is_state(mode_entity, 'paused')
+             and is_state(pause_marker_entity, 'on') }}
+        sequence:
+          - delay:
+              seconds: !input restart_delay
+          - variables:
+              restart_solar_power: "{{ states(solar_power_entity) | float(none) }}"
+              restart_home_load: "{{ states(home_load_entity) | float(none) }}"
+              restart_ev_power: "{{ states(ev_power_entity) | float(none) }}"
+              restart_battery_power: "{{ states(battery_power_entity) | float(none) }}"
+              restart_battery_soc: >-
+                {{ states(battery_soc_entity) | float(none)
+                   if battery_soc_entity else none }}
+          - condition: template
+            value_template: >-
+              {{ is_state(enabled_entity, 'on')
+                 and is_state(mode_entity, 'paused')
+                 and is_state(pause_marker_entity, 'on')
+                 and restart_solar_power is number
+                 and restart_home_load is number
+                 and restart_ev_power is number
+                 and restart_battery_power is number }}
+          - variables:
+              restart_battery_charge: >-
+                {% set normalized = restart_battery_power
+                  if battery_discharge_positive else -restart_battery_power %}
+                {{ [-normalized, 0] | max }}
+              restart_battery_reserve: >-
+                {% if restart_battery_soc is not number %}
+                  {{ battery_max_charge_power }}
+                {% elif restart_battery_soc >= 95 %}
+                  0
+                {% elif restart_battery_soc >= battery_soc_high %}
+                  {{ battery_high_reserve_power }}
+                {% elif restart_battery_soc >= battery_soc_mid %}
+                  {{ battery_mid_reserve_power }}
+                {% else %}
+                  {{ battery_max_charge_power }}
+                {% endif %}
+              restart_effective_home_load: >-
+                {{ [restart_home_load - restart_ev_power, 0] | max
+                   if home_load_includes_ev
+                   else [restart_home_load, 0] | max }}
+              restart_reserve_shortfall: >-
+                {{ [restart_battery_reserve - restart_battery_charge, 0] | max }}
+              restart_reusable_battery_power: >-
+                {{ [restart_battery_charge - restart_battery_reserve, 0] | max
+                   if use_excess_battery_charge else 0 }}
+              restart_target_power: >-
+                {{ [restart_solar_power, 0] | max - restart_effective_home_load
+                   - restart_reserve_shortfall + restart_reusable_battery_power
+                   - target_export_power }}
+          - condition: template
+            value_template: >-
+              {{ is_state(enabled_entity, 'on')
+                 and is_state(mode_entity, 'paused')
+                 and is_state(pause_marker_entity, 'on')
+                 and restart_target_power >= minimum_power }}
+          - if: "{{ not dry_run }}"
+            then:
+              - action: number.set_value
+                target:
+                  entity_id: !input current_limit_entity
+                data:
+                  value: 6
+              - action: select.select_option
+                target:
+                  entity_id: !input mode_entity
+                data:
+                  option: solar
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: !input pause_marker_entity
+          - stop: Restarted solar charging from 6 A
+
+  - condition: state
+    entity_id: !input mode_entity
+    state: solar
+
+  - if: >-
+      {{ not dry_run and reported_current is number
+         and requested_current | int != reported_current | round(0) | int }}
+    then:
+      - action: number.set_value
+        target:
+          entity_id: !input current_limit_entity
+        data:
+          value: "{{ requested_current | int }}"
+
+mode: single
+max_exceeded: silent
