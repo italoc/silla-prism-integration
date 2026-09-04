@@ -9,14 +9,28 @@ measurements and controls; Home Assistant owns the automation logic.
 1. Copy
    `blueprints/automation/silla_prism/solar_battery_balancer.yaml` into the same
    path below the Home Assistant configuration directory.
-2. Create two input boolean helpers: one enables the balancer and one is a
-   private pause marker used only by the blueprint.
+2. Create one input boolean helper as private automatic-pause memory for the
+   blueprint.
 3. Reload automations, create an automation from the blueprint, and select the
    Prism mode, current limit, power, and battery entities.
 4. Begin with **Dry run** enabled and check the automation traces.
 5. Disable dry run only after confirming signs, phases, power values, and port.
 
 Create a separate automation instance and pause marker for each Prism DUO port.
+Enable or disable balancing with the automation's own switch in Home Assistant.
+
+## Required fields
+
+Required fields are marked with `(required)` in the blueprint form:
+
+- automatic pause memory helper;
+- Prism charging mode and current limit for the controlled port;
+- solar production and home load power;
+- Prism charging power for the same port;
+- battery charge/discharge power.
+
+Battery SOC is optional. Installation, battery-priority and tuning fields have
+safe defaults that can be adjusted after testing in dry-run mode.
 
 ## Control rules
 
@@ -51,7 +65,6 @@ automation:
     use_blueprint:
       path: silla_prism/solar_battery_balancer.yaml
       input:
-        enabled_entity: input_boolean.prism_solar_balance
         pause_marker_entity: input_boolean.prism_balancer_paused
         mode_entity: select.silla_prism_set_port_mode
         current_limit_entity: number.silla_prism_set_current_limit

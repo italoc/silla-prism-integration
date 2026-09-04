@@ -27,7 +27,6 @@ BLUEPRINT_PATH = (
 )
 
 ENTITIES = {
-    "enabled_entity": "input_boolean.solar_balance",
     "pause_marker_entity": "input_boolean.solar_balance_paused",
     "mode_entity": "select.prism_mode",
     "current_limit_entity": "number.prism_current_limit",
@@ -105,6 +104,20 @@ def test_all_blueprint_fields_have_descriptions() -> None:
     assert not missing
 
 
+def test_required_blueprint_fields_are_marked() -> None:
+    """Inputs without defaults are visibly marked as required in the form."""
+    blueprint_data = yaml_util.load_yaml(BLUEPRINT_PATH)
+    sections = blueprint_data["blueprint"]["input"]
+    unmarked = [
+        field_name
+        for section in sections.values()
+        for field_name, field in section["input"].items()
+        if "default" not in field and "(required)" not in field["name"].lower()
+    ]
+
+    assert not unmarked
+
+
 def set_inputs(
     hass: HomeAssistant,
     *,
@@ -113,7 +126,6 @@ def set_inputs(
     solar_power: float = 5000,
 ) -> None:
     """Set the entities consumed by the blueprint."""
-    hass.states.async_set("input_boolean.solar_balance", "on")
     hass.states.async_set("input_boolean.solar_balance_paused", marker)
     hass.states.async_set("select.prism_mode", mode)
     hass.states.async_set("number.prism_current_limit", "32")

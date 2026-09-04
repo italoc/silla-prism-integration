@@ -14,30 +14,21 @@ blueprint:
       icon: mdi:ev-station
       collapsed: false
       input:
-        enabled_entity:
-          name: Balancer enabled
-          description: >-
-            Helper that enables solar balancing. Example:
-            `input_boolean.prism_solar_balance`.
-          selector:
-            entity:
-              filter:
-                - domain: input_boolean
         pause_marker_entity:
-          name: Balancer pause marker
+          name: Automatic pause memory (required)
           description: >-
-            A second, dedicated helper used to distinguish an automatic pause
-            from a manual one. Example: `input_boolean.prism_balancer_paused`.
-            Do not use this helper in other automations.
+            **Required.** Dedicated input boolean used to distinguish an automatic
+            pause from a manual one. Example:
+            `input_boolean.prism_balancer_paused`. Do not use it elsewhere.
           selector:
             entity:
               filter:
                 - domain: input_boolean
         mode_entity:
-          name: Prism charging mode
+          name: Prism charging mode (required)
           description: >-
-            Select entity for the controlled Prism port. Its options must include
-            `solar`, `normal`, `paused`, and `hybrid`. Example:
+            **Required.** Select entity for the controlled Prism port. Its options
+            must include `solar`, `normal`, `paused`, and `hybrid`. Example:
             `select.silla_prism_set_port_mode`.
           selector:
             entity:
@@ -45,10 +36,10 @@ blueprint:
                 - domain: select
                   integration: silla_prism
         current_limit_entity:
-          name: Prism current limit
+          name: Prism current limit (required)
           description: >-
-            Number entity that writes the pilot current limit for the same port.
-            Example: `number.silla_prism_set_current_limit`.
+            **Required.** Number entity that writes the pilot current limit for
+            the same port. Example: `number.silla_prism_set_current_limit`.
           selector:
             entity:
               filter:
@@ -60,29 +51,29 @@ blueprint:
       collapsed: false
       input:
         solar_power_entity:
-          name: Solar production
+          name: Solar production (required)
           description: >-
-            Total positive photovoltaic production in watts. For example, the
-            sensor should report `4200` while the inverter produces 4.2 kW.
+            **Required.** Total positive photovoltaic production in watts. For
+            example, the sensor reports `4200` while the inverter produces 4.2 kW.
           selector:
             entity:
               filter:
                 - domain: sensor
                   device_class: power
         home_load_entity:
-          name: Home load
+          name: Home load (required)
           description: >-
-            Positive household consumption in watts. For example, `850` means
-            the home is using 850 W. Use the option below if it includes the EV.
+            **Required.** Positive household consumption in watts. For example,
+            `850` means the home is using 850 W. Indicate below if it includes EV.
           selector:
             entity:
               filter:
                 - domain: sensor
                   device_class: power
         ev_power_entity:
-          name: Prism charging power
+          name: Prism charging power (required)
           description: >-
-            Charging power for this Prism port in watts. Example:
+            **Required.** Charging power for this Prism port in watts. Example:
             `sensor.silla_prism_charging_power`; use the matching port on DUO.
           selector:
             entity:
@@ -90,10 +81,10 @@ blueprint:
                 - domain: sensor
                   device_class: power
         battery_power_entity:
-          name: Battery power
+          name: Battery power (required)
           description: >-
-            Signed battery power in watts. Example: `-1800` while charging and
-            `900` while discharging when positive means discharge.
+            **Required.** Signed battery power in watts. Example: `-1800` while
+            charging and `900` while discharging when positive means discharge.
           selector:
             entity:
               filter:
@@ -102,7 +93,7 @@ blueprint:
         battery_soc_entity:
           name: Battery state of charge
           description: >-
-            Optional battery percentage sensor. Example: `63` means 63% SOC.
+            **Optional.** Battery percentage sensor. Example: `63` means 63% SOC.
             Leave empty to always reserve the maximum battery charge power.
           default: ""
           selector:
@@ -325,8 +316,6 @@ blueprint:
 
 triggers:
   - trigger: state
-    entity_id: !input enabled_entity
-  - trigger: state
     entity_id: !input mode_entity
   - trigger: state
     entity_id: !input current_limit_entity
@@ -344,7 +333,6 @@ triggers:
     event: start
 
 variables:
-  enabled_entity: !input enabled_entity
   pause_marker_entity: !input pause_marker_entity
   mode_entity: !input mode_entity
   current_limit_entity: !input current_limit_entity
@@ -384,14 +372,6 @@ conditions: []
 
 actions:
   - choose:
-      - conditions: "{{ not is_state(enabled_entity, 'on') }}"
-        sequence:
-          - if: "{{ is_state(pause_marker_entity, 'on') and not dry_run }}"
-            then:
-              - action: input_boolean.turn_off
-                target:
-                  entity_id: !input pause_marker_entity
-          - stop: Solar balancing is disabled
       - conditions: "{{ states(mode_entity) in ['normal', 'hybrid'] }}"
         sequence:
           - if: "{{ is_state(pause_marker_entity, 'on') and not dry_run }}"
@@ -495,8 +475,7 @@ actions:
                    if battery_soc_entity else none }}
           - condition: template
             value_template: >-
-              {{ is_state(enabled_entity, 'on')
-                 and is_state(mode_entity, 'paused')
+              {{ is_state(mode_entity, 'paused')
                  and is_state(pause_marker_entity, 'on')
                  and restart_solar_power is number
                  and restart_home_load is number
@@ -534,8 +513,7 @@ actions:
                    - target_export_power }}
           - condition: template
             value_template: >-
-              {{ is_state(enabled_entity, 'on')
-                 and is_state(mode_entity, 'paused')
+              {{ is_state(mode_entity, 'paused')
                  and is_state(pause_marker_entity, 'on')
                  and restart_target_power >= minimum_power }}
           - if: "{{ not dry_run }}"

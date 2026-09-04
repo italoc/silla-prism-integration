@@ -11,6 +11,8 @@
   SOC reserves, dry-run support and one independent controller per DUO port.
 - Added Home Assistant runtime tests for mode ownership, unavailable data,
   manual current correction, configured maximum current and safe restart.
+- Simplified blueprint control by using the automation switch directly instead
+  of a separate enable helper, and visibly marked every required field.
 
 ## 0.9.24
 
