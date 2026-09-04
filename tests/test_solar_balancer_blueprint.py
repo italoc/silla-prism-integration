@@ -91,6 +91,20 @@ def patch_blueprint() -> Iterator[None]:
         yield
 
 
+def test_all_blueprint_fields_have_descriptions() -> None:
+    """Every UI field explains its value and expected units or behavior."""
+    blueprint_data = yaml_util.load_yaml(BLUEPRINT_PATH)
+    sections = blueprint_data["blueprint"]["input"]
+    missing = [
+        field_name
+        for section in sections.values()
+        for field_name, field in section["input"].items()
+        if not field.get("description")
+    ]
+
+    assert not missing
+
+
 def set_inputs(
     hass: HomeAssistant,
     *,

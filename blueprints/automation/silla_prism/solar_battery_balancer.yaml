@@ -16,19 +16,29 @@ blueprint:
       input:
         enabled_entity:
           name: Balancer enabled
+          description: >-
+            Helper that enables solar balancing. Example:
+            `input_boolean.prism_solar_balance`.
           selector:
             entity:
               filter:
                 - domain: input_boolean
         pause_marker_entity:
           name: Balancer pause marker
-          description: Dedicated helper used to distinguish automatic and manual pauses.
+          description: >-
+            A second, dedicated helper used to distinguish an automatic pause
+            from a manual one. Example: `input_boolean.prism_balancer_paused`.
+            Do not use this helper in other automations.
           selector:
             entity:
               filter:
                 - domain: input_boolean
         mode_entity:
           name: Prism charging mode
+          description: >-
+            Select entity for the controlled Prism port. Its options must include
+            `solar`, `normal`, `paused`, and `hybrid`. Example:
+            `select.silla_prism_set_port_mode`.
           selector:
             entity:
               filter:
@@ -36,6 +46,9 @@ blueprint:
                   integration: silla_prism
         current_limit_entity:
           name: Prism current limit
+          description: >-
+            Number entity that writes the pilot current limit for the same port.
+            Example: `number.silla_prism_set_current_limit`.
           selector:
             entity:
               filter:
@@ -48,7 +61,9 @@ blueprint:
       input:
         solar_power_entity:
           name: Solar production
-          description: Positive photovoltaic production in watts.
+          description: >-
+            Total positive photovoltaic production in watts. For example, the
+            sensor should report `4200` while the inverter produces 4.2 kW.
           selector:
             entity:
               filter:
@@ -56,7 +71,9 @@ blueprint:
                   device_class: power
         home_load_entity:
           name: Home load
-          description: Positive household consumption in watts.
+          description: >-
+            Positive household consumption in watts. For example, `850` means
+            the home is using 850 W. Use the option below if it includes the EV.
           selector:
             entity:
               filter:
@@ -64,6 +81,9 @@ blueprint:
                   device_class: power
         ev_power_entity:
           name: Prism charging power
+          description: >-
+            Charging power for this Prism port in watts. Example:
+            `sensor.silla_prism_charging_power`; use the matching port on DUO.
           selector:
             entity:
               filter:
@@ -71,6 +91,9 @@ blueprint:
                   device_class: power
         battery_power_entity:
           name: Battery power
+          description: >-
+            Signed battery power in watts. Example: `-1800` while charging and
+            `900` while discharging when positive means discharge.
           selector:
             entity:
               filter:
@@ -78,7 +101,9 @@ blueprint:
                   device_class: power
         battery_soc_entity:
           name: Battery state of charge
-          description: Optional battery percentage sensor.
+          description: >-
+            Optional battery percentage sensor. Example: `63` means 63% SOC.
+            Leave empty to always reserve the maximum battery charge power.
           default: ""
           selector:
             entity:
@@ -92,16 +117,25 @@ blueprint:
       input:
         home_load_includes_ev:
           name: Home load includes EV charging
+          description: >-
+            Enable when the home-load sensor already contains Prism consumption.
+            Example: a 3.0 kW reading made of 0.7 kW home plus 2.3 kW EV.
           default: false
           selector:
             boolean:
         battery_discharge_positive:
           name: Positive battery power means discharge
+          description: >-
+            Enable for sensors where `+1000 W` means discharge and `-1000 W`
+            means charge. Disable when your sensor uses the opposite convention.
           default: true
           selector:
             boolean:
         nominal_voltage:
           name: Nominal phase voltage
+          description: >-
+            Voltage used to convert available watts into amps. `230 V` is the
+            usual European phase-to-neutral value.
           default: 230
           selector:
             number:
@@ -112,6 +146,9 @@ blueprint:
               mode: box
         charging_phases:
           name: Charging phases
+          description: >-
+            Number of phases used by the car: choose `1` for single-phase charging
+            or `3` for three-phase charging.
           default: 1
           selector:
             number:
@@ -121,6 +158,9 @@ blueprint:
               mode: slider
         maximum_current:
           name: Maximum charging current
+          description: >-
+            Hard limit requested by the balancer. Example: use `16 A` for an
+            11 kW three-phase setup or `32 A` for a 7.4 kW single-phase setup.
           default: 16
           selector:
             number:
@@ -136,11 +176,18 @@ blueprint:
       input:
         use_excess_battery_charge:
           name: Use battery charge above reserve
+          description: >-
+            Allow charging power above the selected battery reserve to feed the
+            EV. Example: with 2.2 kW battery charge and 1.5 kW reserve, 700 W is
+            available to Prism.
           default: true
           selector:
             boolean:
         battery_max_charge_power:
           name: Maximum battery charge power
+          description: >-
+            Charge power reserved while SOC is low or unavailable. Example:
+            `2700 W` for a battery inverter that can charge at 2.7 kW.
           default: 2700
           selector:
             number:
@@ -151,6 +198,9 @@ blueprint:
               mode: box
         battery_soc_mid:
           name: Middle SOC threshold
+          description: >-
+            At or above this SOC, use the middle reserve instead of the maximum.
+            Example: `40%`.
           default: 40
           selector:
             number:
@@ -160,6 +210,9 @@ blueprint:
               unit_of_measurement: "%"
         battery_soc_high:
           name: High SOC threshold
+          description: >-
+            At or above this SOC, use the high-SOC reserve. It must be greater
+            than the middle threshold. Example: `80%`.
           default: 80
           selector:
             number:
@@ -169,6 +222,9 @@ blueprint:
               unit_of_measurement: "%"
         battery_mid_reserve_power:
           name: Reserve above middle SOC
+          description: >-
+            Battery charging power kept between the middle and high thresholds.
+            Example: reserve `1500 W`, then offer only extra power to the EV.
           default: 1500
           selector:
             number:
@@ -179,6 +235,9 @@ blueprint:
               mode: box
         battery_high_reserve_power:
           name: Reserve above high SOC
+          description: >-
+            Battery charging power kept above the high threshold. Example:
+            `1000 W`; at 95% SOC the reserve automatically becomes zero.
           default: 1000
           selector:
             number:
@@ -194,6 +253,9 @@ blueprint:
       input:
         target_export_power:
           name: Grid export reserve
+          description: >-
+            Surplus intentionally left exported instead of assigned to the EV.
+            Example: `100 W` provides a small safety margin against grid import.
           default: 100
           selector:
             number:
@@ -204,6 +266,9 @@ blueprint:
               mode: box
         deadband_power:
           name: Power deadband
+          description: >-
+            Error range where the current is held to avoid oscillation. Example:
+            `150 W` ignores small load and measurement fluctuations.
           default: 150
           selector:
             number:
@@ -214,6 +279,9 @@ blueprint:
               mode: box
         increase_step:
           name: Maximum increase per cycle
+          description: >-
+            Largest current increase every 10-second evaluation. Example: `1 A`
+            gives a gradual ramp and reduces import spikes.
           default: 1
           selector:
             number:
@@ -223,6 +291,9 @@ blueprint:
               unit_of_measurement: A
         decrease_step:
           name: Maximum decrease per cycle
+          description: >-
+            Largest normal current reduction per cycle. Example: `3 A` reacts
+            faster when a new home load starts. The configured maximum is hard.
           default: 3
           selector:
             number:
@@ -232,6 +303,9 @@ blueprint:
               unit_of_measurement: A
         restart_delay:
           name: Stable surplus delay before restart
+          description: >-
+            Time surplus must remain sufficient after an automatic pause. Example:
+            `60 s` prevents rapid pause/restart cycles when clouds pass.
           default: 60
           selector:
             number:
@@ -242,7 +316,9 @@ blueprint:
               mode: box
         dry_run:
           name: Dry run
-          description: Calculate without changing Prism or the pause marker.
+          description: >-
+            Calculate every decision without changing Prism or the pause marker.
+            Enable this during initial setup and inspect automation traces.
           default: false
           selector:
             boolean:

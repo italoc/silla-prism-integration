@@ -38,3 +38,47 @@ another automation or edit it manually.
 
 Automation delays reset when Home Assistant restarts or automations reload.
 After startup, the next evaluation begins a new stable-surplus delay.
+
+## Example configuration
+
+The following entity IDs are examples. Replace them with the entities available
+in your Home Assistant instance. This example describes a 230 V single-phase
+installation limited to 16 A:
+
+```yaml
+automation:
+  - alias: Prism solar balancer
+    use_blueprint:
+      path: silla_prism/solar_battery_balancer.yaml
+      input:
+        enabled_entity: input_boolean.prism_solar_balance
+        pause_marker_entity: input_boolean.prism_balancer_paused
+        mode_entity: select.silla_prism_set_port_mode
+        current_limit_entity: number.silla_prism_set_current_limit
+        solar_power_entity: sensor.pv_production_power
+        home_load_entity: sensor.home_load_power
+        ev_power_entity: sensor.silla_prism_charging_power
+        battery_power_entity: sensor.home_battery_power
+        battery_soc_entity: sensor.home_battery_soc
+        home_load_includes_ev: false
+        battery_discharge_positive: true
+        nominal_voltage: 230
+        charging_phases: 1
+        maximum_current: 16
+        use_excess_battery_charge: true
+        battery_max_charge_power: 2700
+        battery_soc_mid: 40
+        battery_soc_high: 80
+        battery_mid_reserve_power: 1500
+        battery_high_reserve_power: 1000
+        target_export_power: 100
+        deadband_power: 150
+        increase_step: 1
+        decrease_step: 3
+        restart_delay: 60
+        dry_run: true
+```
+
+For three-phase charging, set `charging_phases: 3`. For Prism DUO, create one
+automation per port and select that port's mode, current-limit and charging-power
+entities. Each automation must use its own pause-marker helper.
